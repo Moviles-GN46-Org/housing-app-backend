@@ -1,0 +1,27 @@
+{
+  "name": "housing-app-backend",
+  "version": "1.0.0",
+  "description": "Node JS REST api for the housing app project",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Moviles-GN46-Org/housing-app-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Moviles-GN46-Org/housing-app-backend/issues"
+  },
+  "homepage": "https://github.com/Moviles-GN46-Org/housing-app-backend#readme",
+  "dependencies": {
+    "@prisma/client": "^7.5.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "prisma": "^7.5.0"
+  }
+}

@@ -1,0 +1,499 @@
+// ============================================================
+// UNIHOUSING - Complete Prisma Schema
+// Stack: Node.js + Express + Supabase Postgres + Prisma
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// 1. USER & AUTH
+// ============================================================
+
+enum UserRole {
+  STUDENT
+  LANDLORD
+  ADMIN
+}
+
+enum AuthProvider {
+  EMAIL
+  GOOGLE
+  FACEBOOK
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  passwordHash       String?            // null if using OAuth
+  firstName          String
+  lastName           String
+  phone              String?
+  role               UserRole
+  authProvider       AuthProvider        @default(EMAIL)
+  profilePictureUrl  String?
+  isActive           Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  // Student-specific
+  studentVerification StudentVerification?
+
+  // Landlord-specific
+  landlordVerification LandlordVerification?
+
+  // Relations
+  properties         Property[]         // Landlord's listings
+  reviewsWritten     Review[]           @relation("ReviewAuthor")
+  reviewsReceived    Review[]           @relation("ReviewedLandlord")
+  sentMessages       Message[]          @relation("MessageSender")
+  chatParticipations ChatParticipant[]
+  reports            Report[]           @relation("ReportAuthor")
+  reportsReceived    Report[]           @relation("ReportedUser")
+  roommateProfile    RoommateProfile?
+  swipesMade         RoommateSwipe[]    @relation("Swiper")
+  swipesReceived     RoommateSwipe[]    @relation("Swiped")
+  analyticsEvents    AnalyticsEvent[]
+  notifications      Notification[]
+
+  @@index([role])
+  @@index([email])
+}
+
+// Student email verification (university domain check)
+model StudentVerification {
+  id                String             @id @default(uuid())
+  userId            String             @unique
+  universityEmail   String             @unique
+  verificationCode  String
+  codeExpiresAt     DateTime
+  status            VerificationStatus @default(UNVERIFIED)
+  verifiedAt        DateTime?
+  createdAt         DateTime           @default(now())
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// Landlord identity verification (ID + utility bill)
+model LandlordVerification {
+  id                String             @id @default(uuid())
+  userId            String             @unique
+  idDocumentUrl     String             // Path to uploaded national ID
+  utilityBillUrl    String             // Path to uploaded utility bill
+  status            VerificationStatus @default(PENDING)
+  reviewedBy        String?            // Admin user ID who reviewed
+  rejectionReason   String?
+  reviewedAt        DateTime?
+  createdAt         DateTime           @default(now())
+
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================
+// 2. PROPERTY LISTINGS
+// ============================================================
+
+enum PropertyType {
+  APARTMENT
+  ROOM
+  STUDIO
+  HOUSE
+  SHARED_ROOM
+}
+
+enum PropertyStatus {
+  ACTIVE
+  RENTED
+  HIDDEN       // Hidden by admin or auto-expiration
+  EXPIRED      // Auto-expired after inactivity
+}
+
+model Property {
+  id                String          @id @default(uuid())
+  landlordId        String
+  title             String
+  description       String
+  propertyType      PropertyType
+  status            PropertyStatus  @default(ACTIVE)
+
+  // Pricing
+  monthlyRent       Decimal         @db.Decimal(10, 2)
+  depositAmount     Decimal?        @db.Decimal(10, 2)
+  includesUtilities Boolean         @default(false)
+
+  // Location
+  address           String
+  neighborhood      String
+  city              String          @default("Bogotá")
+  latitude          Float
+  longitude         Float
+
+  // Characteristics
+  sizeM2            Float?          // Size in square meters
+  bedrooms          Int
+  bathrooms         Int
+  furnished         Boolean         @default(false)
+  petFriendly       Boolean         @default(false)
+  hasParking        Boolean         @default(false)
+  hasLaundry        Boolean         @default(false)
+  hasWifi           Boolean         @default(false)
+
+  // Images (stored as GitHub raw URLs)
+  imageUrls         Json            @default("[]") // Array of URL strings
+
+  // Metadata
+  publishedAt       DateTime        @default(now())
+  lastActiveAt      DateTime        @default(now()) // For auto-expiration
+  expirationNotice  DateTime?       // When reminder was sent
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  // Relations
+  landlord          User            @relation(fields: [landlordId], references: [id], onDelete: Cascade)
+  reviews           Review[]
+  chats             Chat[]
+  reports           Report[]
+
+  @@index([status])
+  @@index([landlordId])
+  @@index([neighborhood])
+  @@index([monthlyRent])
+  @@index([latitude, longitude])
+}
+
+// ============================================================
+// 3. REVIEWS & RATINGS
+// ============================================================
+
+model Review {
+  id          String   @id @default(uuid())
+  propertyId  String
+  authorId    String   // Student who wrote the review
+  landlordId  String   // Landlord being reviewed (denormalized for easy avg calc)
+  rating      Int      // 1-5 stars
+  comment     String
+  isVisible   Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  author      User     @relation("ReviewAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  landlord    User     @relation("ReviewedLandlord", fields: [landlordId], references: [id], onDelete: Cascade)
+
+  @@unique([propertyId, authorId]) // One review per student per property
+  @@index([propertyId])
+  @@index([landlordId])
+}
+
+// ============================================================
+// 4. CHAT & MESSAGING (with embedded visit proposals)
+// ============================================================
+
+enum ChatStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
+// A chat can be:
+// - Between a student and a landlord about a specific property (propertyId set)
+// - Between two matched roommates (propertyId null)
+model Chat {
+  id          String        @id @default(uuid())
+  propertyId  String?       // Null for roommate match chats
+  status      ChatStatus    @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  property    Property?     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  participants ChatParticipant[]
+  messages    Message[]
+  visits      Visit[]
+
+  @@index([propertyId])
+}
+
+model ChatParticipant {
+  id        String   @id @default(uuid())
+  chatId    String
+  userId    String
+  joinedAt  DateTime @default(now())
+
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([chatId, userId]) // A user can only be in a chat once
+  @@index([userId])
+}
+
+enum MessageType {
+  TEXT
+  VISIT_PROPOSAL  // Landlord proposes visit dates
+  VISIT_RESPONSE  // Student accepts/declines
+  SYSTEM          // System-generated messages
+}
+
+model Message {
+  id          String      @id @default(uuid())
+  chatId      String
+  senderId    String
+  type        MessageType @default(TEXT)
+  content     String      // Text content for TEXT messages
+  metadata    Json?       // Structured data for VISIT_PROPOSAL and VISIT_RESPONSE
+  isRead      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  chat        Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  sender      User        @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([chatId, createdAt])
+  @@index([senderId])
+}
+
+// ============================================================
+// 5. VISIT SCHEDULING
+// ============================================================
+// A Visit record is ONLY created when a student accepts a proposed date.
+// The proposal itself lives as a VISIT_PROPOSAL message in the chat.
+
+enum VisitStatus {
+  CONFIRMED
+  COMPLETED
+  CANCELLED_BY_STUDENT
+  CANCELLED_BY_LANDLORD
+  NO_SHOW
+}
+
+model Visit {
+  id            String      @id @default(uuid())
+  chatId        String
+  propertyId    String
+  studentId     String
+  landlordId    String
+  scheduledAt   DateTime    // The accepted date/time
+  status        VisitStatus @default(CONFIRMED)
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  chat          Chat        @relation(fields: [chatId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([landlordId])
+  @@index([scheduledAt])
+}
+
+// ============================================================
+// 6. REPORTING / MODERATION
+// ============================================================
+
+enum ReportReason {
+  ASKS_MONEY_OUTSIDE_APP
+  FAKE_LISTING
+  HARASSMENT
+  INAPPROPRIATE_CONTENT
+  SCAM_SUSPICION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED_REMOVED
+  RESOLVED_WARNING
+  RESOLVED_DISMISSED
+}
+
+model Report {
+  id            String       @id @default(uuid())
+  reporterId    String       // User who filed the report
+  reportedUserId String?     // Reported user (if applicable)
+  propertyId    String?      // Reported property (if applicable)
+  reason        ReportReason
+  description   String?
+  status        ReportStatus @default(PENDING)
+  resolvedBy    String?      // Admin user ID
+  resolution    String?
+  createdAt     DateTime     @default(now())
+  resolvedAt    DateTime?
+
+  reporter      User         @relation("ReportAuthor", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser  User?        @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: SetNull)
+  property      Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([propertyId])
+}
+
+// ============================================================
+// 7. ROOMMATE MATCHING
+// ============================================================
+
+enum SleepSchedule {
+  EARLY_BIRD
+  NIGHT_OWL
+  FLEXIBLE
+}
+
+enum CleanlinessLevel {
+  VERY_TIDY
+  MODERATE
+  RELAXED
+}
+
+enum NoisePreference {
+  QUIET
+  MODERATE
+  LIVELY
+}
+
+model RoommateProfile {
+  id                String           @id @default(uuid())
+  userId            String           @unique
+  sleepSchedule     SleepSchedule
+  cleanlinessLevel  CleanlinessLevel
+  noisePreference   NoisePreference
+  smokes            Boolean          @default(false)
+  hasPets           Boolean          @default(false)
+  budgetMin         Decimal          @db.Decimal(10, 2)
+  budgetMax         Decimal          @db.Decimal(10, 2)
+  preferredArea     String?          // Neighborhood preference
+  bio               String?          // Short description
+  isActive          Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  user              User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum SwipeDirection {
+  RIGHT  // Interested
+  LEFT   // Not interested
+}
+
+model RoommateSwipe {
+  id          String         @id @default(uuid())
+  swiperId    String
+  swipedId    String
+  direction   SwipeDirection
+  createdAt   DateTime       @default(now())
+
+  swiper      User           @relation("Swiper", fields: [swiperId], references: [id], onDelete: Cascade)
+  swiped      User           @relation("Swiped", fields: [swipedId], references: [id], onDelete: Cascade)
+
+  @@unique([swiperId, swipedId]) // Can only swipe on someone once
+  @@index([swipedId])
+}
+
+// ============================================================
+// 8. ROOMMATE MATCHES (created when both swipe right)
+// ============================================================
+
+model RoommateMatch {
+  id          String   @id @default(uuid())
+  user1Id     String
+  user2Id     String
+  chatId      String?  // Auto-created chat for matched users
+  createdAt   DateTime @default(now())
+
+  @@unique([user1Id, user2Id])
+  @@index([user1Id])
+  @@index([user2Id])
+}
+
+// ============================================================
+// 9. NOTIFICATIONS
+// ============================================================
+
+enum NotificationType {
+  NEW_MESSAGE
+  VISIT_REMINDER
+  VISIT_CONFIRMED
+  VISIT_CANCELLED
+  ROOMMATE_MATCH
+  REVIEW_RECEIVED
+  LISTING_EXPIRING
+  REPORT_RESOLVED
+  VERIFICATION_APPROVED
+  VERIFICATION_REJECTED
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?            // Additional context (propertyId, chatId, etc.)
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ============================================================
+// 10. ANALYTICS EVENTS (Generic event store)
+// ============================================================
+// Single table approach - flexible JSON payload per event type
+//
+// Event types and their expected payloads:
+//
+// SESSION_START:    { device, os, appVersion }
+// SESSION_END:      { durationSeconds }
+// SEARCH:           { filters: { petFriendly, maxPrice, ... }, resultsCount }
+// PROPERTY_VIEW:    { propertyId, source: "map"|"list"|"search" }
+// FILTER_APPLIED:   { filterName, filterValue }
+// FEATURE_CLICK:    { feature: "roommate_finder"|"chat"|"reviews"|... }
+// MAP_INTERACTION:  { action: "zoom"|"pan"|"search_area", location }
+// CHAT_STARTED:     { propertyId, landlordId }
+// REVIEW_SUBMITTED: { propertyId, rating }
+// VISIT_SCHEDULED:  { propertyId, chatId }
+// CRASH:            { screen, errorMessage, stackTrace }
+
+enum AnalyticsEventType {
+  SESSION_START
+  SESSION_END
+  SEARCH
+  PROPERTY_VIEW
+  FILTER_APPLIED
+  FEATURE_CLICK
+  MAP_INTERACTION
+  CHAT_STARTED
+  REVIEW_SUBMITTED
+  VISIT_SCHEDULED
+  CRASH
+}
+
+model AnalyticsEvent {
+  id          String             @id @default(uuid())
+  userId      String?            // Nullable for anonymous events
+  sessionId   String             // Groups events in a session
+  eventType   AnalyticsEventType
+  payload     Json               // Flexible data per event type
+  screenName  String?            // Which screen the event occurred on
+  timestamp   DateTime           @default(now())
+
+  user        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([eventType])
+  @@index([sessionId])
+  @@index([timestamp])
+  @@index([userId])
+  @@index([screenName])
+}
