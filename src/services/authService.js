@@ -35,6 +35,13 @@ const authService = {
       throw new ValidationError('role must be STUDENT, LANDLORD, or ADMIN');
     }
 
+    if (role === 'STUDENT') {
+      const eduPattern = /^[^\s@]+@[^\s@]+\.edu(\.[a-zA-Z]{2,})?$/i;
+      if (!eduPattern.test(email)) {
+        throw new ValidationError('Students must register with a valid .edu email address');
+      }
+    }
+
     const existing = await userRepository.findByEmail(email);
     if (existing) throw new ConflictError('Email already in use');
 
