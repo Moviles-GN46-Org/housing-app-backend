@@ -1,23 +1,32 @@
-const { verifyToken } = require('../utils/jwt');
-const { UnauthorizedError } = require('../utils/errors');
-
+// ⚠️ AUTENTICACIÓN DESHABILITADA - Middleware que permite acceso sin validación de JWT
 function auth(req, res, next) {
+  // Si hay un token válido en la solicitud, usarlo; si no, usar un usuario de prueba
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
-    return next(new UnauthorizedError('Missing or invalid Authorization header'));
+  
+  if (header && header.startsWith('Bearer ')) {
+    // Intentar usar el token si existe (para compatibilidad)
+    try {
+      const { verifyToken } = require('../utils/jwt');
+      const token = header.slice(7);
+      const payload = verifyToken(token);
+      req.user = {
+        userId: payload.userId,
+        role: payload.role,
+        isVerified: payload.isVerified,
+      };
+      return next();
+    } catch (err) {
+      // Si el token es inválido, continuar con usuario de prueba
+    }
   }
-  const token = header.slice(7);
-  try {
-    const payload = verifyToken(token);
-    req.user = {
-      userId: payload.userId,
-      role: payload.role,
-      isVerified: payload.isVerified,
-    };
-    next();
-  } catch {
-    next(new UnauthorizedError('Invalid or expired token'));
-  }
+  
+  // Usuario de prueba por defecto (autenticación deshabilitada)
+  req.user = {
+    userId: 1,
+    role: 'LANDLORD', // Cambiar a 'STUDENT' o el rol que necesites
+    isVerified: true,
+  };
+  next();
 }
 
 module.exports = auth;
