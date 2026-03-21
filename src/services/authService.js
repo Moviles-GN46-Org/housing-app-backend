@@ -3,6 +3,7 @@ const { OAuth2Client } = require('google-auth-library');
 const userRepository = require('../repositories/userRepository');
 const { generateAccessToken, generateRefreshToken, verifyRefreshToken } = require('../utils/jwt');
 const logger = require('../utils/logger');
+const emailService = require('./emailService');
 const {
   ValidationError,
   UnauthorizedError,
@@ -70,8 +71,8 @@ const authService = {
         codeExpiresAt,
         status: 'UNVERIFIED',
       });
-      // TODO: send verification email with code
-      logger.info('Verification code generated (send via email)', { userId: user.id, code });
+      await emailService.sendVerificationCode({ to: email, firstName, code });
+      logger.info('Verification code generated and email sent', { userId: user.id });
     }
     // ADMIN: verified by default (no verification record needed)
     if (role === 'LANDLORD') {
@@ -216,7 +217,8 @@ const authService = {
     const codeExpiresAt = new Date(Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000);
     await userRepository.updateStudentVerification(userId, { verificationCode: code, codeExpiresAt });
 
-    logger.info('Verification code resent', { userId, code });
+    await emailService.sendVerificationCode({ to: user.email, firstName: user.firstName, code });
+    logger.info('Verification code resent', { userId });
     return { message: 'Verification code sent' };
   },
 
