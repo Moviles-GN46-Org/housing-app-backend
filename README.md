@@ -1,2 +1,3 @@
 # housing-app-backend
-Node JS REST api for the housing app project
+
+Node JS REST api for the housing app project CasAndes
