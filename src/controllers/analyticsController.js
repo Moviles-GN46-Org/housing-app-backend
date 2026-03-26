@@ -19,6 +19,25 @@ const analyticsController = {
     }
   },
 
+  async trackSearchEvent(req, res, next) {
+    try {
+      const actorUserId = req.user?.userId || null;
+      const result = await analyticsService.trackSearchEvent(actorUserId, req.body);
+      res.status(201).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getTopSearchedZones(req, res, next) {
+    try {
+      const data = await analyticsService.getTopSearchedZones(req.query);
+      res.json({ success: true, data: { zones: data } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getDashboard(req, res, next) {
     try {
       const dashboard = await analyticsService.getDashboard();

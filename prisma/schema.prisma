@@ -66,6 +66,7 @@ model User {
   swipesMade         RoommateSwipe[]    @relation("Swiper")
   swipesReceived     RoommateSwipe[]    @relation("Swiped")
   analyticsEvents    AnalyticsEvent[]
+  searchEvents       SearchEvent[]
   notifications      Notification[]
 
   @@index([role])
@@ -495,4 +496,36 @@ model AnalyticsEvent {
   @@index([timestamp])
   @@index([userId])
   @@index([screenName])
+}
+
+enum SearchEventSource {
+  house_list
+  map
+}
+
+model SearchEvent {
+  id            String            @id @default(uuid())
+  userId        String?
+  sessionId     String
+  query         String?
+  city          String
+  neighborhood  String?
+  canonicalZone String
+  lat           Float?
+  lng           Float?
+  radiusKm      Float?
+  filters       Json?
+  filtersHash   String
+  source        SearchEventSource
+  searchedAt    DateTime          @default(now())
+  createdAt     DateTime          @default(now())
+
+  user          User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([searchedAt])
+  @@index([city, canonicalZone])
+  @@index([city, canonicalZone, searchedAt])
+  @@index([sessionId, searchedAt])
+  @@index([userId, searchedAt])
+  @@index([filtersHash])
 }
