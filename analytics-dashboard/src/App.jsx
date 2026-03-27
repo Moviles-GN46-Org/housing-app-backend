@@ -7,6 +7,7 @@ import { LayoutDashboard, Calendar, RefreshCw } from "lucide-react";
 
 export default function App() {
   const [lastUpdated] = useState("Mar 26, 2025 · 9:41 AM");
+  const [zonesRefreshToken, setZonesRefreshToken] = useState(0);
 
   return (
     <div className="min-h-screen bg-linen font-sans">
@@ -34,7 +35,10 @@ export default function App() {
               <Calendar size={12} />
               <span>{lastUpdated}</span>
             </div>
-            <button className="flex items-center gap-1.5 bg-bronze text-white text-xs font-medium px-3.5 py-1.5 rounded-full hover:bg-[#C8874A] transition-colors">
+            <button
+              onClick={() => setZonesRefreshToken((v) => v + 1)}
+              className="flex items-center gap-1.5 bg-bronze text-white text-xs font-medium px-3.5 py-1.5 rounded-full hover:bg-[#C8874A] transition-colors"
+            >
               <RefreshCw size={12} />
               Refresh
             </button>
@@ -91,7 +95,7 @@ export default function App() {
             <FeatureUsageCard />
           </div>
           <div className="card-animate" style={{ animationDelay: "240ms" }}>
-            <ZonesCard />
+            <ZonesCard refreshToken={zonesRefreshToken} />
           </div>
         </div>
       </main>

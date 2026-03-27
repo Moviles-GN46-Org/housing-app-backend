@@ -1,14 +1,10 @@
+import { useEffect, useMemo, useState } from 'react'
 import { MapPin, TrendingUp } from 'lucide-react'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 
-const zones = [
-  { name: 'Chapinero', searches: 4820, pct: 35, color: '#DA9958' },
-  { name: 'Usaquén', searches: 3260, pct: 24, color: '#C8874A' },
-  { name: 'Teusaquillo', searches: 2190, pct: 16, color: '#B87640' },
-  { name: 'La Candelaria', searches: 1780, pct: 13, color: '#E8B07A' },
-  { name: 'Suba', searches: 820, pct: 6, color: '#F2CFA0' },
-  { name: 'Other', searches: 830, pct: 6, color: '#E8DDD4' },
-]
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
+const MAX_ZONES = 5
+const ZONE_COLORS = ['#DA9958', '#C8874A', '#B87640', '#E8B07A', '#F2CFA0']
 
 const CustomTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
@@ -23,8 +19,75 @@ const CustomTooltip = ({ active, payload }) => {
   return null
 }
 
-export default function ZonesCard() {
+function toTop5Zones(rawZones) {
+  const filtered = (rawZones || []).filter((zone) => {
+    const neighborhood = String(zone?.neighborhood || '').trim()
+    return neighborhood.length > 0
+  })
+
+  const topFive = filtered.slice(0, MAX_ZONES)
+  const total = topFive.reduce((sum, z) => sum + Number(z.searches || 0), 0)
+
+  return topFive.map((zone, index) => {
+    const searches = Number(zone.searches || 0)
+    const pct = total > 0 ? Math.round((searches / total) * 100) : 0
+    return {
+      name: zone.neighborhood,
+      city: zone.city,
+      searches,
+      pct,
+      color: ZONE_COLORS[index % ZONE_COLORS.length],
+    }
+  })
+}
+
+export default function ZonesCard({ refreshToken = 0 }) {
+  const [zones, setZones] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let ignore = false
+
+    async function loadTopZones() {
+      setIsLoading(true)
+      setError(null)
+      try {
+        const from = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+        const to = new Date().toISOString()
+        const url = `${API_BASE_URL}/analytics/top-searched-zones?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&limit=${MAX_ZONES}`
+        const res = await fetch(url)
+        if (!res.ok) {
+          throw new Error(`Request failed with status ${res.status}`)
+        }
+        const json = await res.json()
+        if (!ignore) {
+          setZones(toTop5Zones(json?.data?.zones || []))
+        }
+      } catch (err) {
+        if (!ignore) {
+          setError(err.message || 'Failed to load zones')
+          setZones([])
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadTopZones()
+    return () => {
+      ignore = true
+    }
+  }, [refreshToken])
+
   const top = zones[0]
+  const zoneCountLabel = useMemo(() => {
+    if (isLoading) return 'loading'
+    if (error) return 'error'
+    return `${zones.length} zones`
+  }, [isLoading, error, zones.length])
 
   return (
     <div className="bg-white_card rounded-2xl border border-[#E8DDD4] shadow-sm overflow-hidden">
@@ -41,36 +104,46 @@ export default function ZonesCard() {
           </div>
           <div className="flex items-center gap-1 bg-emerald-50 text-emerald-600 text-xs font-semibold px-2.5 py-1 rounded-full">
             <TrendingUp size={11} />
-            {zones.length} zones
+            {zoneCountLabel}
           </div>
         </div>
 
         <div className="mt-5 flex gap-4 items-center">
           {/* Pie chart */}
           <div className="w-36 h-36 shrink-0">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={zones}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={38}
-                  outerRadius={62}
-                  paddingAngle={2}
-                  dataKey="pct"
-                >
-                  {zones.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<CustomTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
+            {isLoading ? (
+              <div className="h-full w-full rounded-full border border-[#E8DDD4] bg-[#FBF3EB] flex items-center justify-center text-xs text-taupe">
+                Loading...
+              </div>
+            ) : zones.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={zones}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={38}
+                    outerRadius={62}
+                    paddingAngle={2}
+                    dataKey="pct"
+                  >
+                    {zones.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full rounded-full border border-[#E8DDD4] bg-[#FBF3EB] flex items-center justify-center text-xs text-taupe text-center px-2">
+                {error ? 'Failed to load' : 'No data'}
+              </div>
+            )}
           </div>
 
           {/* Legend list */}
           <div className="flex-1 space-y-2">
-            {zones.map((z, i) => (
+            {zones.map((z) => (
               <div key={z.name} className="flex items-center gap-2">
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: z.color }} />
                 <span className="text-ash text-xs flex-1 truncate">{z.name}</span>
@@ -86,17 +159,23 @@ export default function ZonesCard() {
         </div>
 
         {/* Top zone callout */}
-        <div className="mt-4 flex items-center gap-3 bg-[#FBF3EB] border border-[#E8DDD4] rounded-xl px-4 py-3">
-          <MapPin size={14} className="text-bronze shrink-0" />
-          <div className="flex-1">
-            <p className="text-taupe text-xs">Most searched zone</p>
-            <p className="text-mocha font-semibold">{top.name}</p>
+        {top && (
+          <div className="mt-4 flex items-center gap-3 bg-[#FBF3EB] border border-[#E8DDD4] rounded-xl px-4 py-3">
+            <MapPin size={14} className="text-bronze shrink-0" />
+            <div className="flex-1">
+              <p className="text-taupe text-xs">Most searched zone</p>
+              <p className="text-mocha font-semibold">{top.name}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-mocha font-bold text-lg">{top.pct}%</p>
+              <p className="text-taupe text-xs">{top.searches.toLocaleString()} searches</p>
+            </div>
           </div>
-          <div className="text-right">
-            <p className="text-mocha font-bold text-lg">{top.pct}%</p>
-            <p className="text-taupe text-xs">{top.searches.toLocaleString()} searches</p>
-          </div>
-        </div>
+        )}
+
+        {error && (
+          <p className="mt-3 text-xs text-rose-500">{error}</p>
+        )}
       </div>
     </div>
   )
