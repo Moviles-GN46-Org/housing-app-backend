@@ -1,0 +1,264 @@
+openapi: 3.0.3
+info:
+  title: CasAndes Analytics Search API
+  version: 1.0.0
+  description: Endpoints for tracking housing search events and querying top searched zones.
+servers:
+  - url: http://localhost:3000/api
+paths:
+  /analytics/search-events:
+    post:
+      summary: Track a housing search event
+      description: |
+        Registers one search event in raw storage with deduplication in a short time window.
+        The API accepts anonymous sessions (userId nullable).
+      tags:
+        - Analytics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchEventRequest'
+            examples:
+              basic:
+                summary: Search from house list
+                value:
+                  sessionId: s_abc_123
+                  query: apartaestudio cerca uni
+                  city: Bogotá
+                  neighborhood: Santa Fe
+                  lat: 4.60971
+                  lng: -74.08175
+                  radiusKm: 3
+                  filters:
+                    budget:
+                      max: 1800000
+                    propertyType: ROOM
+                    amenities:
+                      - wifi
+                      - laundry
+                  source: house_list
+              anonymous:
+                summary: Anonymous map search
+                value:
+                  userId: null
+                  sessionId: anon_7788
+                  city: Bogotá
+                  neighborhood: Chapinero
+                  source: map
+      responses:
+        '201':
+          description: Search event processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchEventResponse'
+              examples:
+                created:
+                  value:
+                    success: true
+                    data:
+                      id: 3a7ea985-6cf4-4e86-8f36-193a498412fd
+                      deduped: false
+                deduped:
+                  value:
+                    success: true
+                    data:
+                      id: 3a7ea985-6cf4-4e86-8f36-193a498412fd
+                      deduped: true
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /analytics/top-searched-zones:
+    get:
+      summary: Get ranking of most searched zones
+      description: |
+        Returns top searched zones by city and neighborhood for a time range.
+        Also includes trendVsPreviousPeriod against an immediately previous period
+        with the same duration.
+      tags:
+        - Analytics
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Inclusive range start (ISO date-time)
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+          description: Exclusive range end (ISO date-time)
+        - name: city
+          in: query
+          required: false
+          schema:
+            type: string
+          description: City filter (normalized in backend)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: Aggregated zones ranking
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopSearchedZonesResponse'
+              examples:
+                top10:
+                  value:
+                    success: true
+                    data:
+                      zones:
+                        - city: bogota
+                          neighborhood: santa fe
+                          searches: 124
+                          uniqueUsers: 90
+                          trendVsPreviousPeriod: 18.5
+                        - city: bogota
+                          neighborhood: chapinero
+                          searches: 87
+                          uniqueUsers: 63
+                          trendVsPreviousPeriod: -4.2
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    SearchEventRequest:
+      type: object
+      required:
+        - sessionId
+        - city
+        - source
+      properties:
+        userId:
+          type: string
+          nullable: true
+          description: Nullable for anonymous events
+        sessionId:
+          type: string
+          maxLength: 120
+        query:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Free text query. Sensitive PII patterns are redacted server-side.
+        city:
+          type: string
+          maxLength: 120
+        neighborhood:
+          type: string
+          nullable: true
+          maxLength: 120
+        lat:
+          type: number
+          format: double
+          nullable: true
+        lng:
+          type: number
+          format: double
+          nullable: true
+        radiusKm:
+          type: number
+          format: double
+          nullable: true
+          minimum: 0.000001
+          maximum: 100
+        filters:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: budget, propertyType, amenities and any extra filter dimensions
+        source:
+          type: string
+          enum: [house_list, map]
+        searchedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: If omitted, server current time is used.
+
+    SearchEventResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+            deduped:
+              type: boolean
+
+    TopZone:
+      type: object
+      properties:
+        city:
+          type: string
+        neighborhood:
+          type: string
+          nullable: true
+        searches:
+          type: integer
+        uniqueUsers:
+          type: integer
+        trendVsPreviousPeriod:
+          type: number
+          format: double
+          description: Percentage trend against previous period of same duration.
+
+    TopSearchedZonesResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            zones:
+              type: array
+              items:
+                $ref: '#/components/schemas/TopZone'
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            code:
+              type: string
