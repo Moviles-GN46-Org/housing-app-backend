@@ -10,5 +10,6 @@ router.post('/events/batch', auth, analyticsController.logBatch);
 router.post('/search-events', analyticsSearchRateLimit(), analyticsController.trackSearchEvent);
 router.get('/top-searched-zones', analyticsController.getTopSearchedZones);
 router.get('/dashboard', auth, roleGuard('ADMIN'), analyticsController.getDashboard);
+router.get('/crash-stats', analyticsController.getCrashStats);
 
 module.exports = router;

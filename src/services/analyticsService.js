@@ -262,6 +262,30 @@ const analyticsService = {
   async getDashboard() {
     return analyticsRepository.getDashboard();
   },
+
+  async getCrashStats(queryParams) {
+    const { from, to } = queryParams || {};
+    let fromDate = null;
+    let toDate = null;
+
+    if (from) {
+      fromDate = new Date(from);
+      if (Number.isNaN(fromDate.getTime())) {
+        throw new ValidationError('from must be a valid ISO date');
+      }
+    }
+    if (to) {
+      toDate = new Date(to);
+      if (Number.isNaN(toDate.getTime())) {
+        throw new ValidationError('to must be a valid ISO date');
+      }
+    }
+    if (fromDate && toDate && toDate <= fromDate) {
+      throw new ValidationError('to must be greater than from');
+    }
+
+    return analyticsRepository.getCrashStats({ from: fromDate, to: toDate });
+  },
 };
 
 module.exports = analyticsService;

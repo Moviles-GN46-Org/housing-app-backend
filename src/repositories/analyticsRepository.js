@@ -102,6 +102,35 @@ const analyticsRepository = {
     ]);
     return { totalEvents, byType };
   },
+
+  async getCrashStats({ from, to }) {
+    const dateFilter = {};
+    if (from) dateFilter.gte = from;
+    if (to) dateFilter.lte = to;
+
+    const where = {
+      eventType: 'CRASH',
+      ...(from || to ? { timestamp: dateFilter } : {}),
+    };
+
+    const [total, byScreen] = await Promise.all([
+      prisma.analyticsEvent.count({ where }),
+      prisma.analyticsEvent.groupBy({
+        by: ['screenName'],
+        where,
+        _count: { id: true },
+        orderBy: { _count: { id: 'desc' } },
+      }),
+    ]);
+
+    return {
+      total,
+      screens: byScreen.map((row) => ({
+        name: row.screenName || 'Unknown',
+        crashes: row._count.id,
+      })),
+    };
+  },
 };
 
 module.exports = analyticsRepository;
