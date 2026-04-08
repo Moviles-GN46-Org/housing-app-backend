@@ -1,5 +1,6 @@
 const propertyRepository = require('../repositories/propertyRepository');
 const userRepository = require('../repositories/userRepository');
+const appEvents = require('../events/eventEmitter');
 const DistanceFilter = require('../strategies/filtering/distanceFilter');
 const logger = require('../utils/logger');
 const { NotFoundError, ForbiddenError, ValidationError } = require('../utils/errors');
@@ -58,6 +59,12 @@ const propertyService = {
     }
 
     const property = await propertyRepository.create({ ...data, landlordId, status: 'ACTIVE' });
+    appEvents.emit('property:created', {
+      property,
+      landlord: user,
+      propertyId: property.id,
+      landlordId,
+    });
     logger.info('Property listing created', { propertyId: property.id, landlordId, title });
     return property;
   },

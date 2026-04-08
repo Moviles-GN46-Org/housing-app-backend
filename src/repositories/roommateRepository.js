@@ -3,7 +3,12 @@ const prisma = require('../prisma');
 
 const roommateRepository = {
   async getProfile(userId) {
-    return prisma.roommateProfile.findUnique({ where: { userId } });
+    return prisma.roommateProfile.findUnique({
+      where: { userId },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, profilePictureUrl: true } },
+      },
+    });
   },
 
   async upsertProfile(userId, data) {
@@ -18,6 +23,30 @@ const roommateRepository = {
     return prisma.roommateProfile.findMany({
       where: { isActive: true, userId: { not: excludeUserId } },
       include: { user: { select: { id: true, firstName: true, lastName: true, profilePictureUrl: true } } },
+    });
+  },
+
+  async getActiveTenantNotificationCandidates(excludeUserId) {
+    return prisma.roommateProfile.findMany({
+      where: {
+        isActive: true,
+        userId: { not: excludeUserId },
+        user: { role: 'STUDENT', isActive: true },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            role: true,
+            searchEvents: {
+              orderBy: { searchedAt: 'desc' },
+              take: 1,
+              select: { filters: true },
+            },
+          },
+        },
+      },
     });
   },
 

@@ -8,6 +8,7 @@ const EventEmitter = require('events');
 //   'report:created'   → { report, reporter, property }
 //   'message:sent'     → { message, chat, sender }
 //   'listing:expiring' → { property, landlord }
+//   'property:created' → { property, landlord, propertyId, landlordId }
 
 const appEvents = new EventEmitter();
 appEvents.setMaxListeners(20);

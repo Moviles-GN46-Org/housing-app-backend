@@ -1,6 +1,72 @@
 const appEvents = require('../eventEmitter');
 const notificationService = require('../../services/notificationService');
+const roommateRepository = require('../../repositories/roommateRepository');
 const logger = require('../../utils/logger');
+
+const normalizeText = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+
+const asNumber = (value) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const getLatestSearchFilters = (candidate) => {
+  const latest = candidate?.user?.searchEvents?.[0]?.filters;
+  return latest && typeof latest === 'object' && !Array.isArray(latest) ? latest : {};
+};
+
+const matchesBudget = (candidate, propertyRent) => {
+  const rent = asNumber(propertyRent);
+  if (rent === null) return false;
+
+  const min = asNumber(candidate.budgetMin);
+  const max = asNumber(candidate.budgetMax);
+
+  if (min !== null && rent < min) return false;
+  if (max !== null && rent > max) return false;
+  return true;
+};
+
+const matchesArea = (candidate, propertyNeighborhood) => {
+  const preferredArea = normalizeText(candidate.preferredArea);
+  if (!preferredArea) return true;
+
+  const neighborhood = normalizeText(propertyNeighborhood);
+  return neighborhood.includes(preferredArea) || preferredArea.includes(neighborhood);
+};
+
+const matchesPropertyType = (filters, propertyType) => {
+  const preferredType = normalizeText(filters.propertyType);
+  if (!preferredType) return true;
+  return preferredType === normalizeText(propertyType);
+};
+
+const amenityFilterMap = {
+  furnished: 'furnished',
+  petFriendly: 'petFriendly',
+  hasParking: 'hasParking',
+  hasLaundry: 'hasLaundry',
+  hasWifi: 'hasWifi',
+};
+
+const matchesAmenities = (filters, property) => {
+  for (const [filterKey, propertyKey] of Object.entries(amenityFilterMap)) {
+    if (filters[filterKey] === true && property[propertyKey] !== true) {
+      return false;
+    }
+  }
+  return true;
+};
+
+const buildPropertyMatchBody = (property, tenantName) => {
+  const areaLabel = property.neighborhood ? ` in ${property.neighborhood}` : '';
+  return `${tenantName}, a new ${String(property.propertyType || 'property').toLowerCase()}${areaLabel} matches your preferences.`;
+};
 
 appEvents.on('visit:confirmed', async ({ visit, student, landlord }) => {
   try {
@@ -74,6 +140,53 @@ appEvents.on('message:sent', async ({ message, chat, sender }) => {
     }
   } catch (err) {
     logger.error('[notificationListener] message:sent error:', err.message);
+  }
+});
+
+appEvents.on('property:created', async ({ property, landlord }) => {
+  try {
+    const candidates = await roommateRepository.getActiveTenantNotificationCandidates(landlord?.id);
+    let notificationsSent = 0;
+
+    for (const candidate of candidates) {
+      try {
+        if (!candidate.user || candidate.user.role !== 'STUDENT') continue;
+        if (candidate.user.id === landlord?.id) continue;
+        if (!matchesBudget(candidate, property.monthlyRent)) continue;
+        if (!matchesArea(candidate, property.neighborhood)) continue;
+
+        const filters = getLatestSearchFilters(candidate);
+        if (!matchesPropertyType(filters, property.propertyType)) continue;
+        if (!matchesAmenities(filters, property)) continue;
+
+        await notificationService.create({
+          userId: candidate.user.id,
+          type: 'PROPERTY_MATCH',
+          title: 'New Property Match',
+          body: buildPropertyMatchBody(property, candidate.user.firstName || 'Hi'),
+          data: {
+            propertyId: property.id,
+            landlordId: landlord?.id || null,
+            neighborhood: property.neighborhood,
+            monthlyRent: property.monthlyRent,
+            source: 'property_created_observer',
+          },
+        });
+
+        notificationsSent += 1;
+      } catch (candidateErr) {
+        logger.error('[notificationListener] property:created candidate error:', candidateErr.message);
+      }
+    }
+
+    logger.info('[notificationListener] property:created handled', {
+      propertyId: property.id,
+      landlordId: landlord?.id,
+      candidates: candidates.length,
+      notificationsSent,
+    });
+  } catch (err) {
+    logger.error('[notificationListener] property:created error:', err.message);
   }
 });
 

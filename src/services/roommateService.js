@@ -36,6 +36,33 @@ class RoommateService {
       throw new ValidationError(`noisePreference must be one of: ${VALID_NOISE.join(', ')}`);
     }
 
+    if (data.birthDate !== undefined && data.birthDate !== null) {
+      const parsedDate = new Date(data.birthDate);
+      if (Number.isNaN(parsedDate.getTime())) {
+        throw new ValidationError('birthDate must be a valid date');
+      }
+      if (parsedDate > new Date()) {
+        throw new ValidationError('birthDate cannot be in the future');
+      }
+      data.birthDate = parsedDate;
+    }
+
+    if (data.job !== undefined) {
+      const normalized = String(data.job || '').trim();
+      if (normalized.length > 100) {
+        throw new ValidationError('job must be at most 100 characters');
+      }
+      data.job = normalized || null;
+    }
+
+    if (data.university !== undefined) {
+      const normalized = String(data.university || '').trim();
+      if (normalized.length > 120) {
+        throw new ValidationError('university must be at most 120 characters');
+      }
+      data.university = normalized || null;
+    }
+
     return roommateRepository.upsertProfile(userId, data);
   }
 
@@ -48,10 +75,14 @@ class RoommateService {
 
     const candidates = allProfiles
       .filter((p) => !alreadySwiped.includes(p.userId))
-      .map((p) => ({
-        ...p,
-        compatibilityScore: this.strategy.score(myProfile, p),
-      }))
+      .map((p) => {
+        const score = this.strategy.score(myProfile, p);
+        return {
+          ...p,
+          compatibilityScore: score,
+          matchRate: score,
+        };
+      })
       .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
 
     return candidates;

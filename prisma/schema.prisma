@@ -372,6 +372,9 @@ model RoommateProfile {
   budgetMax         Decimal          @db.Decimal(10, 2)
   preferredArea     String?          // Neighborhood preference
   bio               String?          // Short description
+  birthDate         DateTime?
+  job               String?
+  university        String?
   isActive          Boolean          @default(true)
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
@@ -420,6 +423,7 @@ model RoommateMatch {
 
 enum NotificationType {
   NEW_MESSAGE
+  PROPERTY_MATCH
   VISIT_REMINDER
   VISIT_CONFIRMED
   VISIT_CANCELLED
