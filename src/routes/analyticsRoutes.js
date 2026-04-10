@@ -21,5 +21,6 @@ router.get(
   analyticsController.getDashboard,
 );
 router.get("/crash-stats", analyticsController.getCrashStats);
+router.get('/supply-density', analyticsController.getSupplyDensity);
 
 module.exports = router;

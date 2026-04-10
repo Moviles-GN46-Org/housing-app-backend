@@ -1,5 +1,5 @@
-const prisma = require("../prisma");
-const { Prisma } = require("@prisma/client");
+const prisma = require('../prisma');
+const { Prisma } = require('@prisma/client');
 
 const analyticsRepository = {
   async logEvent({ userId, sessionId, eventType, payload, screenName }) {
@@ -60,19 +60,10 @@ const analyticsRepository = {
     const cityFilter = city ? Prisma.sql`AND "city" = ${city}` : Prisma.empty;
 
     return prisma.$queryRaw`
-      SELECT
-        "city" AS "city",
-        "canonicalZone" AS "canonicalZone",
-        MAX("neighborhood") AS "neighborhood",
-        COUNT(*)::int AS "searches",
-        COUNT(DISTINCT COALESCE("userId", 'session:' || "sessionId"))::int AS "uniqueUsers"
-      FROM "SearchEvent"
-      WHERE "searchedAt" >= ${from}
-        AND "searchedAt" < ${to}
-        ${cityFilter}
-      GROUP BY "city", "canonicalZone"
-      ORDER BY "searches" DESC, "uniqueUsers" DESC, "canonicalZone" ASC
-      LIMIT ${limit}
+      SELECT "city", "canonicalZone", MAX("neighborhood") AS "neighborhood", 
+      COUNT(*)::int AS "searches", COUNT(DISTINCT COALESCE("userId", 'session:' || "sessionId"))::int AS "uniqueUsers"
+      FROM "SearchEvent" WHERE "searchedAt" >= ${from} AND "searchedAt" < ${to} ${cityFilter}
+      GROUP BY "city", "canonicalZone" ORDER BY "searches" DESC LIMIT ${limit}
     `;
   },
 
@@ -80,13 +71,8 @@ const analyticsRepository = {
     const cityFilter = city ? Prisma.sql`AND "city" = ${city}` : Prisma.empty;
 
     return prisma.$queryRaw`
-      SELECT
-        "canonicalZone" AS "canonicalZone",
-        COUNT(*)::int AS "searches"
-      FROM "SearchEvent"
-      WHERE "searchedAt" >= ${from}
-        AND "searchedAt" < ${to}
-        ${cityFilter}
+      SELECT "canonicalZone", COUNT(*)::int AS "searches"
+      FROM "SearchEvent" WHERE "searchedAt" >= ${from} AND "searchedAt" < ${to} ${cityFilter}
       GROUP BY "canonicalZone"
     `;
   },
@@ -161,13 +147,24 @@ const analyticsRepository = {
         orderBy: { _count: { id: "desc" } },
       }),
     ]);
+    return { total, screens: byScreen.map(row => ({ name: row.screenName || 'Unknown', crashes: row._count.id })) };
+  },
 
+  async getSupplyDensityStats() {
+    const results = await prisma.$queryRaw`
+      SELECT AVG((payload->>'value')::float) as "averageDensity", COUNT(*)::int as "totalChecks"
+      FROM "AnalyticsEvent" WHERE "eventType"::text = 'SUPPLY_DENSITY_CHECK'
+    `;
+    const stats = results[0];
     return {
       total,
       screens: byScreen.map((row) => ({
         name: row.screenName || "Unknown",
         crashes: row._count.id,
       })),
+      averageDensity: stats.averageDensity || 0,
+      totalChecks: stats.totalChecks || 0,
+      status: (stats.averageDensity > 0.4) ? 'High Supply' : 'High Demand'
     };
   },
 };

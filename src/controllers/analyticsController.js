@@ -70,6 +70,15 @@ const analyticsController = {
       next(err);
     }
   },
+
+  async getSupplyDensity(req, res, next) {
+    try {
+      const data = await analyticsService.getSupplyDensityStats();
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = analyticsController;

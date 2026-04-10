@@ -3,10 +3,11 @@ import SessionCard from "./components/SessionCard";
 import CrashRateCard from "./components/CrashRateCard";
 import FeatureUsageCard from "./components/FeatureUsageCard";
 import ZonesCard from "./components/ZonesCard";
+import SupplyDensityCard from "./components/SupplyDensityCard";
 import { LayoutDashboard, Calendar, RefreshCw } from "lucide-react";
 
 export default function App() {
-  const [lastUpdated] = useState("Mar 26, 2025 · 9:41 AM");
+  const [lastUpdated] = useState("Apr 10, 2026 · 5:45 AM");
   const [zonesRefreshToken, setZonesRefreshToken] = useState(0);
 
   return (
@@ -96,6 +97,11 @@ export default function App() {
           </div>
           <div className="card-animate" style={{ animationDelay: "240ms" }}>
             <FeatureUsageCard />
+          </div>
+          
+          {/* NUEVA TARJETA: Supply Density (BQ de Bryan) */}
+          <div className="card-animate" style={{ animationDelay: "320ms" }}>
+            <SupplyDensityCard />
           </div>
         </div>
       </main>
