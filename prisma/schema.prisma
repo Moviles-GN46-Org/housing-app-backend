@@ -482,6 +482,7 @@ enum AnalyticsEventType {
   REVIEW_SUBMITTED
   VISIT_SCHEDULED
   CRASH
+  SUPPLY_DENSITY_CHECK
 }
 
 model AnalyticsEvent {

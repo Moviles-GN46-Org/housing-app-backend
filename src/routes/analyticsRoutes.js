@@ -11,5 +11,6 @@ router.post('/search-events', analyticsSearchRateLimit(), analyticsController.tr
 router.get('/top-searched-zones', analyticsController.getTopSearchedZones);
 router.get('/dashboard', auth, roleGuard('ADMIN'), analyticsController.getDashboard);
 router.get('/crash-stats', analyticsController.getCrashStats);
+router.get('/supply-density', analyticsController.getSupplyDensity);
 
 module.exports = router;

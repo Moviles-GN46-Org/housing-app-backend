@@ -11,7 +11,7 @@ const {
 const VALID_EVENT_TYPES = [
   'SESSION_START', 'SESSION_END', 'SEARCH', 'PROPERTY_VIEW',
   'FILTER_APPLIED', 'FEATURE_CLICK', 'MAP_INTERACTION',
-  'CHAT_STARTED', 'REVIEW_SUBMITTED', 'VISIT_SCHEDULED', 'CRASH',
+  'CHAT_STARTED', 'REVIEW_SUBMITTED', 'VISIT_SCHEDULED', 'CRASH', 'SUPPLY_DENSITY_CHECK',
 ];
 
 const VALID_SEARCH_SOURCES = ['house_list', 'map'];
@@ -286,6 +286,13 @@ const analyticsService = {
 
     return analyticsRepository.getCrashStats({ from: fromDate, to: toDate });
   },
+
+  async getSupplyDensityStats() {
+    return analyticsRepository.getSupplyDensityStats();
+  },
+  
 };
+
+
 
 module.exports = analyticsService;
