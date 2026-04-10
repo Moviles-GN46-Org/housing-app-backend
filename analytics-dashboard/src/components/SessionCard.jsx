@@ -12,21 +12,11 @@ import {
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
 
 function formatSeconds(totalSeconds) {
-  if (totalSeconds == null) return "—";
+  if (totalSeconds == null) return "-";
   const m = Math.floor(totalSeconds / 60);
   const s = Math.round(totalSeconds % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }
-
-const FALLBACK_DATA = [
-  { day: "Mon", minutes: 3.2 },
-  { day: "Tue", minutes: 4.1 },
-  { day: "Wed", minutes: 3.8 },
-  { day: "Thu", minutes: 5.0 },
-  { day: "Fri", minutes: 4.7 },
-  { day: "Sat", minutes: 6.2 },
-  { day: "Sun", minutes: 4.5 },
-];
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -42,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function SessionCard() {
   const [stats, setStats] = useState(null);
-  const [chartData, setChartData] = useState(FALLBACK_DATA);
+  const [chartData, setChartData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -58,7 +48,7 @@ export default function SessionCard() {
         if (cancelled) return;
         const { overall, daily } = body.data;
         setStats(overall);
-        if (daily && daily.length > 0) {
+        if (daily) {
           setChartData(
             daily.map((row) => ({ day: row.day, minutes: row.avgMinutes })),
           );
@@ -75,10 +65,10 @@ export default function SessionCard() {
     };
   }, []);
 
-  const avgDisplay = loading ? "—" : formatSeconds(stats?.avgSeconds);
-  const minDisplay = loading ? "—" : formatSeconds(stats?.minSeconds);
-  const maxDisplay = loading ? "—" : formatSeconds(stats?.maxSeconds);
-  const medianDisplay = loading ? "—" : formatSeconds(stats?.medianSeconds);
+  const avgDisplay = loading ? "-" : formatSeconds(stats?.avgSeconds);
+  const minDisplay = loading ? "-" : formatSeconds(stats?.minSeconds);
+  const maxDisplay = loading ? "-" : formatSeconds(stats?.maxSeconds);
+  const medianDisplay = loading ? "-" : formatSeconds(stats?.medianSeconds);
 
   return (
     <div className="bg-white_card rounded-2xl border border-[#E8DDD4] shadow-sm overflow-hidden">
@@ -112,7 +102,9 @@ export default function SessionCard() {
               {avgDisplay}
             </span>
           )}
-          <span className="text-taupe text-sm mb-2">min avg / session</span>
+          <span className="text-taupe text-sm mb-2">
+            minutes per session in average
+          </span>
         </div>
 
         <div className="mt-3 flex gap-4">
@@ -130,7 +122,7 @@ export default function SessionCard() {
       </div>
 
       {/* Chart */}
-      <div className="h-36 px-2 pb-3">
+      {/* <div className="h-36 px-2 pb-3">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={chartData}
@@ -170,7 +162,7 @@ export default function SessionCard() {
             />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
+      </div> */}
     </div>
   );
 }
