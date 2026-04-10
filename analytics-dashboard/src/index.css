@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 body {
-  background-color: #FBF3EB;
-  font-family: 'Instrument Sans', sans-serif;
+  background-color: #fbf3eb;
+  font-family: "Instrument Sans", sans-serif;
 }
 
 @keyframes fadeInUp {

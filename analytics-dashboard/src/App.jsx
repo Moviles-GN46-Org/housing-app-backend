@@ -32,10 +32,10 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center gap-1.5 text-taupe text-xs bg-linen rounded-full px-3 py-1.5 border border-[#E8DDD4]">
+            {/* <div className="hidden sm:flex items-center gap-1.5 text-taupe text-xs bg-linen rounded-full px-3 py-1.5 border border-[#E8DDD4]">
               <Calendar size={12} />
               <span>{lastUpdated}</span>
-            </div>
+            </div> */}
             <button
               onClick={() => setZonesRefreshToken((v) => v + 1)}
               className="flex items-center gap-1.5 bg-bronze text-white text-xs font-medium px-3.5 py-1.5 rounded-full hover:bg-[#C8874A] transition-colors"
@@ -48,7 +48,7 @@ export default function App() {
       </header>
 
       {/* Summary strip */}
-      <div className="bg-white_card border-b border-[#E8DDD4]">
+      {/* <div className="bg-white_card border-b border-[#E8DDD4]">
         <div className="max-w-7xl mx-auto px-6 py-3 flex gap-6 overflow-x-auto">
           {[
             { label: "Avg. Session", value: "4m 32s", delta: "+12%" },
@@ -81,22 +81,22 @@ export default function App() {
             </div>
           ))}
         </div>
-      </div>
+      </div> */}
 
       {/* Dashboard Grid */}
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="card-animate" style={{ animationDelay: "0ms" }}>
-            <SessionCard />
-          </div>
-          <div className="card-animate" style={{ animationDelay: "80ms" }}>
             <CrashRateCard />
           </div>
+          <div className="card-animate" style={{ animationDelay: "80ms" }}>
+            <ZonesCard refreshToken={zonesRefreshToken} />
+          </div>
           <div className="card-animate" style={{ animationDelay: "160ms" }}>
-            <FeatureUsageCard />
+            <SessionCard />
           </div>
           <div className="card-animate" style={{ animationDelay: "240ms" }}>
-            <ZonesCard refreshToken={zonesRefreshToken} />
+            <FeatureUsageCard />
           </div>
           
           {/* NUEVA TARJETA: Supply Density (BQ de Bryan) */}

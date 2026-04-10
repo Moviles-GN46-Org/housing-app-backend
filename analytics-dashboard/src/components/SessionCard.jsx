@@ -1,4 +1,5 @@
-import { Clock, TrendingUp } from 'lucide-react'
+import { useState, useEffect } from "react";
+import { Clock, TrendingUp, Loader2 } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -6,17 +7,16 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts'
+} from "recharts";
 
-const data = [
-  { day: 'Mon', minutes: 3.2 },
-  { day: 'Tue', minutes: 4.1 },
-  { day: 'Wed', minutes: 3.8 },
-  { day: 'Thu', minutes: 5.0 },
-  { day: 'Fri', minutes: 4.7 },
-  { day: 'Sat', minutes: 6.2 },
-  { day: 'Sun', minutes: 4.5 },
-]
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
+
+function formatSeconds(totalSeconds) {
+  if (totalSeconds == null) return "-";
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.round(totalSeconds % 60);
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
@@ -25,12 +25,51 @@ const CustomTooltip = ({ active, payload, label }) => {
         <p className="text-taupe font-medium">{label}</p>
         <p className="text-mocha font-semibold">{payload[0].value} min</p>
       </div>
-    )
+    );
   }
-  return null
-}
+  return null;
+};
 
 export default function SessionCard() {
+  const [stats, setStats] = useState(null);
+  const [chartData, setChartData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchSessionStats() {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/analytics/session-stats?days=7`,
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const body = await res.json();
+        if (cancelled) return;
+        const { overall, daily } = body.data;
+        setStats(overall);
+        if (daily) {
+          setChartData(
+            daily.map((row) => ({ day: row.day, minutes: row.avgMinutes })),
+          );
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    fetchSessionStats();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const avgDisplay = loading ? "-" : formatSeconds(stats?.avgSeconds);
+  const minDisplay = loading ? "-" : formatSeconds(stats?.minSeconds);
+  const maxDisplay = loading ? "-" : formatSeconds(stats?.maxSeconds);
+  const medianDisplay = loading ? "-" : formatSeconds(stats?.medianSeconds);
+
   return (
     <div className="bg-white_card rounded-2xl border border-[#E8DDD4] shadow-sm overflow-hidden">
       {/* Card header */}
@@ -41,27 +80,38 @@ export default function SessionCard() {
               <Clock size={16} className="text-bronze" strokeWidth={2} />
             </div>
             <div>
-              <p className="text-taupe text-xs font-medium uppercase tracking-wider">Session Duration</p>
-              <h2 className="text-mocha font-semibold text-sm">How long do users stay?</h2>
+              <p className="text-taupe text-xs font-medium uppercase tracking-wider">
+                Session Duration
+              </p>
+              <h2 className="text-mocha font-semibold text-sm">
+                How long do users stay?
+              </h2>
             </div>
           </div>
-          <div className="flex items-center gap-1 bg-emerald-50 text-emerald-600 text-xs font-semibold px-2.5 py-1 rounded-full">
-            <TrendingUp size={11} />
-            +12%
-          </div>
+          {error && (
+            <span className="text-rose-400 text-xs">Live data unavailable</span>
+          )}
         </div>
 
         {/* Big stat */}
         <div className="mt-5 flex items-end gap-3">
-          <span className="text-mocha text-5xl font-semibold tracking-tight">4:32</span>
-          <span className="text-taupe text-sm mb-2">min avg / session</span>
+          {loading ? (
+            <Loader2 size={32} className="text-bronze animate-spin mb-1" />
+          ) : (
+            <span className="text-mocha text-5xl font-semibold tracking-tight">
+              {avgDisplay}
+            </span>
+          )}
+          <span className="text-taupe text-sm mb-2">
+            minutes per session in average
+          </span>
         </div>
 
         <div className="mt-3 flex gap-4">
           {[
-            { label: 'Shortest', value: '0:48' },
-            { label: 'Longest', value: '18:21' },
-            { label: 'Median', value: '3:55' },
+            { label: "Shortest", value: minDisplay },
+            { label: "Longest", value: maxDisplay },
+            { label: "Median", value: medianDisplay },
           ].map((s) => (
             <div key={s.label}>
               <p className="text-taupe text-xs">{s.label}</p>
@@ -72,17 +122,29 @@ export default function SessionCard() {
       </div>
 
       {/* Chart */}
-      <div className="h-36 px-2 pb-3">
+      {/* <div className="h-36 px-2 pb-3">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data} margin={{ top: 4, right: 12, left: -24, bottom: 0 }}>
+          <AreaChart
+            data={chartData}
+            margin={{ top: 4, right: 12, left: -24, bottom: 0 }}
+          >
             <defs>
               <linearGradient id="sessionGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#DA9958" stopOpacity={0.25} />
                 <stop offset="95%" stopColor="#DA9958" stopOpacity={0} />
               </linearGradient>
             </defs>
-            <XAxis dataKey="day" tick={{ fontSize: 11, fill: '#8B7364' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: '#8B7364' }} axisLine={false} tickLine={false} />
+            <XAxis
+              dataKey="day"
+              tick={{ fontSize: 11, fill: "#8B7364" }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: "#8B7364" }}
+              axisLine={false}
+              tickLine={false}
+            />
             <Tooltip content={<CustomTooltip />} />
             <Area
               type="monotone"
@@ -91,11 +153,16 @@ export default function SessionCard() {
               strokeWidth={2}
               fill="url(#sessionGradient)"
               dot={false}
-              activeDot={{ r: 4, fill: '#DA9958', stroke: '#FEFBF9', strokeWidth: 2 }}
+              activeDot={{
+                r: 4,
+                fill: "#DA9958",
+                stroke: "#FEFBF9",
+                strokeWidth: 2,
+              }}
             />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
+      </div> */}
     </div>
-  )
+  );
 }
