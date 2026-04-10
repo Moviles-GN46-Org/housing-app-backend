@@ -1,4 +1,4 @@
-const analyticsService = require('../services/analyticsService');
+const analyticsService = require("../services/analyticsService");
 
 const analyticsController = {
   async logEvent(req, res, next) {
@@ -12,7 +12,10 @@ const analyticsController = {
 
   async logBatch(req, res, next) {
     try {
-      const result = await analyticsService.logBatch(req.user.userId, req.body.events);
+      const result = await analyticsService.logBatch(
+        req.user.userId,
+        req.body.events,
+      );
       res.status(201).json({ success: true, data: { count: result.count } });
     } catch (err) {
       next(err);
@@ -22,7 +25,10 @@ const analyticsController = {
   async trackSearchEvent(req, res, next) {
     try {
       const actorUserId = req.user?.userId || null;
-      const result = await analyticsService.trackSearchEvent(actorUserId, req.body);
+      const result = await analyticsService.trackSearchEvent(
+        actorUserId,
+        req.body,
+      );
       res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -33,6 +39,15 @@ const analyticsController = {
     try {
       const data = await analyticsService.getTopSearchedZones(req.query);
       res.json({ success: true, data: { zones: data } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getSessionStats(req, res, next) {
+    try {
+      const data = await analyticsService.getSessionStats(req.query);
+      res.json({ success: true, data });
     } catch (err) {
       next(err);
     }
