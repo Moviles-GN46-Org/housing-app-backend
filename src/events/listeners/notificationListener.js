@@ -146,6 +146,7 @@ appEvents.on('message:sent', async ({ message, chat, sender }) => {
 appEvents.on('property:created', async ({ property, landlord }) => {
   try {
     const candidates = await roommateRepository.getActiveTenantNotificationCandidates(landlord?.id);
+    const safeMonthlyRent = asNumber(property.monthlyRent);
     let notificationsSent = 0;
 
     for (const candidate of candidates) {
@@ -168,14 +169,19 @@ appEvents.on('property:created', async ({ property, landlord }) => {
             propertyId: property.id,
             landlordId: landlord?.id || null,
             neighborhood: property.neighborhood,
-            monthlyRent: property.monthlyRent,
+            monthlyRent: safeMonthlyRent,
             source: 'property_created_observer',
           },
         });
 
         notificationsSent += 1;
       } catch (candidateErr) {
-        logger.error('[notificationListener] property:created candidate error:', candidateErr.message);
+        logger.error('[notificationListener] property:created candidate error', {
+          candidateUserId: candidate?.user?.id,
+          propertyId: property?.id,
+          code: candidateErr?.code,
+          message: candidateErr?.message,
+        });
       }
     }
 
@@ -186,7 +192,12 @@ appEvents.on('property:created', async ({ property, landlord }) => {
       notificationsSent,
     });
   } catch (err) {
-    logger.error('[notificationListener] property:created error:', err.message);
+    logger.error('[notificationListener] property:created error', {
+      propertyId: property?.id,
+      landlordId: landlord?.id,
+      code: err?.code,
+      message: err?.message,
+    });
   }
 });
 

@@ -10,5 +10,6 @@ router.use('/reports', require('./reportRoutes'));
 router.use('/notifications', require('./notificationRoutes'));
 router.use('/analytics', require('./analyticsRoutes'));
 router.use('/admin', require('./adminRoutes'));
+router.use('/test-tools', require('./testToolsRoutes'));
 
 module.exports = router;
