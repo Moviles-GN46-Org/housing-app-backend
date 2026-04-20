@@ -514,7 +514,10 @@ async acceptVisitProposal(chatId, messageId, selectedSlotId, studentId) {
 &sortBy=price|distance|recent
 &page=1
 &limit=20
+&includeAveragePrice=true|false
 ```
+
+When `includeAveragePrice=true`, the response payload also includes `data.averageMonthlyRent`, calculated from the full filtered result set before pagination.
 
 ### 3.3 Reviews
 | Method | Endpoint                            | Role     | Description                          |

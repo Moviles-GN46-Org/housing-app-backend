@@ -7,9 +7,30 @@ const { NotFoundError, ForbiddenError, ValidationError } = require('../utils/err
 
 const distanceFilter = new DistanceFilter();
 
+function toBoolean(value) {
+  return value === true || value === 'true';
+}
+
+function calculateAverageMonthlyRent(properties) {
+  if (!properties.length) return null;
+
+  const totalRent = properties.reduce((sum, property) => sum + Number(property.monthlyRent), 0);
+  return parseFloat((totalRent / properties.length).toFixed(2));
+}
+
 const propertyService = {
   async search(queryParams) {
-    const { lat, lng, radiusKm, sortBy, page = 1, limit = 20, ...filters } = queryParams;
+    const {
+      lat,
+      lng,
+      radiusKm,
+      sortBy,
+      page = 1,
+      limit = 20,
+      includeAveragePrice = false,
+      ...filters
+    } = queryParams;
+    const shouldIncludeAveragePrice = toBoolean(includeAveragePrice);
 
     let properties = await propertyRepository.findByFilters(filters);
     const beforeFilter = properties.length;
@@ -35,9 +56,22 @@ const propertyService = {
     const limitNum = parseInt(limit);
     const start = (pageNum - 1) * limitNum;
     const paginated = properties.slice(start, start + limitNum);
+    const averageMonthlyRent = shouldIncludeAveragePrice ? calculateAverageMonthlyRent(properties) : undefined;
 
-    logger.debug('Property search completed', { total: properties.length, returned: paginated.length, filters });
-    return { properties: paginated, total: properties.length, page: pageNum, limit: limitNum };
+    logger.debug('Property search completed', {
+      total: properties.length,
+      returned: paginated.length,
+      filters,
+      includeAveragePrice: shouldIncludeAveragePrice,
+    });
+
+    return {
+      properties: paginated,
+      total: properties.length,
+      page: pageNum,
+      limit: limitNum,
+      ...(shouldIncludeAveragePrice ? { averageMonthlyRent } : {}),
+    };
   },
 
   async getById(id) {
