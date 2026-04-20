@@ -68,6 +68,7 @@ model User {
   analyticsEvents    AnalyticsEvent[]
   searchEvents       SearchEvent[]
   notifications      Notification[]
+  favorites          Favorite[]
 
   @@index([role])
   @@index([email])
@@ -166,6 +167,7 @@ model Property {
   reviews           Review[]
   chats             Chat[]
   reports           Report[]
+  favorites         Favorite[]
 
   @@index([status])
   @@index([landlordId])
@@ -418,7 +420,26 @@ model RoommateMatch {
 }
 
 // ============================================================
-// 9. NOTIFICATIONS
+// 9. FAVORITES SYSTEM (User's saved properties)
+// ============================================================
+
+model Favorite {
+  id          String   @id @default(uuid())
+  userId      String
+  propertyId  String
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId]) // One favorite per user per property
+  @@index([userId])
+  @@index([propertyId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// 10. NOTIFICATIONS
 // ============================================================
 
 enum NotificationType {
@@ -452,7 +473,7 @@ model Notification {
 }
 
 // ============================================================
-// 10. ANALYTICS EVENTS (Generic event store)
+// 11. ANALYTICS EVENTS (Generic event store)
 // ============================================================
 // Single table approach - flexible JSON payload per event type
 //

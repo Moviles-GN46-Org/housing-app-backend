@@ -1,5 +1,5 @@
-const prisma = require('../prisma');
-const { Prisma } = require('@prisma/client');
+const prisma = require("../prisma");
+const { Prisma } = require("@prisma/client");
 
 const analyticsRepository = {
   async logEvent({ userId, sessionId, eventType, payload, screenName }) {
@@ -147,7 +147,13 @@ const analyticsRepository = {
         orderBy: { _count: { id: "desc" } },
       }),
     ]);
-    return { total, screens: byScreen.map(row => ({ name: row.screenName || 'Unknown', crashes: row._count.id })) };
+    return {
+      total,
+      screens: byScreen.map((row) => ({
+        name: row.screenName || "Unknown",
+        crashes: row._count.id,
+      })),
+    };
   },
 
   async getSupplyDensityStats() {
@@ -155,16 +161,13 @@ const analyticsRepository = {
       SELECT AVG((payload->>'value')::float) as "averageDensity", COUNT(*)::int as "totalChecks"
       FROM "AnalyticsEvent" WHERE "eventType"::text = 'SUPPLY_DENSITY_CHECK'
     `;
+
     const stats = results[0];
+
     return {
-      total,
-      screens: byScreen.map((row) => ({
-        name: row.screenName || "Unknown",
-        crashes: row._count.id,
-      })),
-      averageDensity: stats.averageDensity || 0,
-      totalChecks: stats.totalChecks || 0,
-      status: (stats.averageDensity > 0.4) ? 'High Supply' : 'High Demand'
+      averageDensity: stats?.averageDensity || 0,
+      totalChecks: stats?.totalChecks || 0,
+      status: stats?.averageDensity > 0.4 ? "High Supply" : "High Demand",
     };
   },
 };
