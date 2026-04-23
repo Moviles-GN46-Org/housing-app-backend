@@ -1,4 +1,6 @@
 const analyticsRepository = require("../repositories/analyticsRepository");
+const roommateRepository = require("../repositories/roommateRepository");
+const universityRepository = require("../repositories/universityRepository");
 const { ValidationError } = require("../utils/errors");
 const {
   normalizeText,
@@ -23,6 +25,29 @@ const MAX_QUERY_LENGTH = 500;
 const MAX_CITY_LENGTH = 120;
 const MAX_NEIGHBORHOOD_LENGTH = 120;
 const MAX_RADIUS_KM = 100;
+const DEFAULT_APARTMENT_BUCKET_SIZE = 5;
+const DEFAULT_POPULAR_SIZES_LIMIT = 3;
+
+function toNumberOrNull(value, fieldName) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new ValidationError(`${fieldName} must be a valid number`);
+  }
+
+  return parsed;
+}
+
+function formatSizeBucket(bucketMinM2, bucketMaxM2) {
+  return `${bucketMinM2}-${bucketMaxM2} m2`;
+}
+
+function toBooleanFlag(value) {
+  return value === true || value === "true";
+}
 
 function toPositiveLimit(value) {
   if (value === undefined || value === null || value === "") {
@@ -345,6 +370,57 @@ const analyticsService = {
 
   async getSupplyDensityStats() {
     return analyticsRepository.getSupplyDensityStats();
+  },
+
+  async getPopularApartmentSizeNearUniversity(userId, options = {}) {
+    if (!userId) {
+      throw new ValidationError("userId is required");
+    }
+
+    const onlyPopularSize = toBooleanFlag(options.onlyPopularSize);
+
+    const profile = await roommateRepository.getProfile(userId);
+    const university = await universityRepository.resolveByName(profile?.university);
+
+    if (!university) {
+      throw new ValidationError("No university configuration available");
+    }
+
+    const radiusKm = toNumberOrNull(university.defaultRadiusKm, "defaultRadiusKm") || 2;
+    const popularSizes = await analyticsRepository.getPopularApartmentSizesNearLocation({
+      latitude: university.latitude,
+      longitude: university.longitude,
+      radiusKm,
+      limit: DEFAULT_POPULAR_SIZES_LIMIT,
+      bucketSize: DEFAULT_APARTMENT_BUCKET_SIZE,
+    });
+
+    const topSizes = popularSizes.map((row) => ({
+      sizeRange: formatSizeBucket(Number(row.bucketMinM2), Number(row.bucketMaxM2)),
+      bucketMinM2: Number(row.bucketMinM2),
+      bucketMaxM2: Number(row.bucketMaxM2),
+      count: Number(row.count),
+      averageSizeM2: Number(row.avgSizeM2),
+    }));
+
+    const response = {
+      university: {
+        id: university.id,
+        name: university.name,
+        city: university.city || null,
+        latitude: university.latitude,
+        longitude: university.longitude,
+        radiusKm,
+      },
+      topSizes,
+      popularSize: topSizes[0] || null,
+    };
+
+    if (onlyPopularSize) {
+      return { popularSize: response.popularSize };
+    }
+
+    return response;
   },
   
 };

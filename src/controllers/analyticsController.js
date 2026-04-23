@@ -79,6 +79,15 @@ const analyticsController = {
       next(err);
     }
   },
+
+  async getPopularApartmentSizeNearUniversity(req, res, next) {
+    try {
+      const data = await analyticsService.getPopularApartmentSizeNearUniversity(req.user.userId, req.query);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = analyticsController;
