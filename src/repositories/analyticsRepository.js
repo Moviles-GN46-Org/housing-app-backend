@@ -69,6 +69,37 @@ const analyticsRepository = {
     return prisma.searchEvent.create({ data });
   },
 
+  async getPopularApartmentSizesNearLocation({ latitude, longitude, radiusKm, limit = 3, bucketSize = 5 }) {
+    return prisma.$queryRaw`
+      WITH nearby_properties AS (
+        SELECT
+          "sizeM2",
+          FLOOR("sizeM2" / ${bucketSize})::int * ${bucketSize} AS "bucketMinM2"
+        FROM "Property"
+        WHERE "status" = 'ACTIVE'
+          AND "propertyType" = 'APARTMENT'
+          AND "sizeM2" IS NOT NULL
+          AND (
+            6371 * ACOS(
+              LEAST(1, GREATEST(-1,
+                COS(RADIANS(${latitude})) * COS(RADIANS("latitude")) * COS(RADIANS("longitude") - RADIANS(${longitude})) +
+                SIN(RADIANS(${latitude})) * SIN(RADIANS("latitude"))
+              ))
+            )
+          ) <= ${radiusKm}
+      )
+      SELECT
+        "bucketMinM2",
+        ("bucketMinM2" + ${bucketSize} - 1)::int AS "bucketMaxM2",
+        COUNT(*)::int AS "count",
+        ROUND(AVG("sizeM2")::numeric, 1)::float AS "avgSizeM2"
+      FROM nearby_properties
+      GROUP BY "bucketMinM2"
+      ORDER BY "count" DESC, "bucketMinM2" ASC
+      LIMIT ${limit}
+    `;
+  },
+
   async getTopSearchedZonesCurrent({ from, to, city, limit }) {
     const cityFilter = city ? Prisma.sql`AND "city" = ${city}` : Prisma.empty;
 

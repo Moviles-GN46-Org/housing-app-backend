@@ -15,6 +15,12 @@ router.post(
 router.get("/top-searched-zones", analyticsController.getTopSearchedZones);
 router.get("/session-stats", analyticsController.getSessionStats);
 router.get(
+  "/popular-apartment-size-near-university",
+  auth,
+  roleGuard("STUDENT"),
+  analyticsController.getPopularApartmentSizeNearUniversity,
+);
+router.get(
   "/dashboard",
   auth,
   roleGuard("ADMIN"),

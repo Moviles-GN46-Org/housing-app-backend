@@ -73,6 +73,24 @@ model User {
   @@index([email])
 }
 
+model University {
+  id               String   @id @default(uuid())
+  name             String
+  normalizedName   String   @unique
+  aliases          Json     @default("[]")
+  city             String?
+  latitude         Float
+  longitude        Float
+  defaultRadiusKm  Float    @default(2)
+  isDefault        Boolean  @default(false)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([isDefault])
+}
+
 // Student email verification (university domain check)
 model StudentVerification {
   id                String             @id @default(uuid())
