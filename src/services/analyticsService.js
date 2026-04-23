@@ -89,6 +89,69 @@ function validateSearchSignal({
   }
 }
 
+function parseDateRange(queryParams) {
+  const { from, to } = queryParams || {};
+  if (!from || !to) {
+    throw new ValidationError("from and to are required query params (ISO date)");
+  }
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    throw new ValidationError("from and to must be valid ISO dates");
+  }
+  if (toDate <= fromDate) {
+    throw new ValidationError("to must be greater than from");
+  }
+  return { fromDate, toDate };
+}
+
+function round2(value) {
+  return value === null ? null : Number(value.toFixed(2));
+}
+
+function percentile(sortedValues, p) {
+  if (!sortedValues.length) return null;
+  const idx = (sortedValues.length - 1) * p;
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sortedValues[lower];
+  const weight = idx - lower;
+  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * weight;
+}
+
+function buildDistanceSummary(rows, isPersonal) {
+  if (!rows.length) {
+    return {
+      preferredKm: null,
+      recommendedMaxKm: null,
+      maxObservedKm: null,
+      samples: 0,
+      lastUpdatedAt: null,
+      message: isPersonal
+      ? "Aun no tenemos suficientes busquedas tuyas para recomendar una distancia."
+      : "Aun no hay suficientes busquedas para calcular la recomendacion global.",
+    };
+  }
+  const values = rows
+  .map((r) => Number(r.radiusKm))
+  .filter((v) => Number.isFinite(v))
+  .sort((a, b) => a - b);
+  const preferred = percentile(values, 0.5);
+  const recommended = percentile(values, 0.75);
+  const maxObserved = values[values.length - 1];
+  const lastUpdatedAt = rows[rows.length - 1]?.searchedAt?.toISOString?.() || null;
+  return {
+    preferredKm: round2(preferred),
+    recommendedMaxKm: round2(recommended),
+    maxObservedKm: round2(maxObserved),
+    samples: values.length,
+    lastUpdatedAt,
+    message: isPersonal
+    ? "Segun tus busquedas recientes, prefieres viviendas hasta " + round2(preferred) + " km."
+    : "En general, los usuarios prefieren buscar hasta " + round2(preferred) + " km.",
+  };
+}
+
 const analyticsService = {
   async logEvent(userId, { sessionId, eventType, payload, screenName }) {
     if (!sessionId || !eventType || !payload) {
@@ -343,6 +406,28 @@ const analyticsService = {
     return analyticsRepository.getCrashStats({ from: fromDate, to: toDate });
   },
 
+  async getPreferredMaxDistanceSummary(queryParams) {
+    const { fromDate, toDate } = parseDateRange(queryParams);
+    const rows = await analyticsRepository.listRadiusSearches({
+      from: fromDate,
+      to: toDate,
+      userId: null,
+    });
+    return buildDistanceSummary(rows, false);
+  },
+  
+  async getMyPreferredMaxDistance(userId, queryParams) {
+    if (!userId) {
+      throw new ValidationError("Authenticated user is required");
+    }
+    const { fromDate, toDate } = parseDateRange(queryParams);
+    const rows = await analyticsRepository.listRadiusSearches({
+      from: fromDate,
+      to: toDate,
+      userId,
+    });
+    return buildDistanceSummary(rows, true);
+  },
   async getSupplyDensityStats() {
     return analyticsRepository.getSupplyDensityStats();
   },

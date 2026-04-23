@@ -22,6 +22,24 @@ const analyticsController = {
     }
   },
 
+  async getPreferredMaxDistanceSummary(req, res, next) {
+    try {
+      const data = await analyticsService.getPreferredMaxDistanceSummary(req.query);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+  async getMyPreferredMaxDistance(req, res, next) {
+    try {
+      const userId = req.user?.userId;
+      const data = await analyticsService.getMyPreferredMaxDistance(userId, req.query);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async trackSearchEvent(req, res, next) {
     try {
       const actorUserId = req.user?.userId || null;

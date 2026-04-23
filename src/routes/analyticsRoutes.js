@@ -23,4 +23,7 @@ router.get(
 router.get("/crash-stats", analyticsController.getCrashStats);
 router.get('/supply-density', analyticsController.getSupplyDensity);
 
+router.get('/preferred-max-distance-summary', auth, analyticsController.getPreferredMaxDistanceSummary);
+router.get('/my-preferred-max-distance', auth, analyticsController.getMyPreferredMaxDistance);
+
 module.exports = router;

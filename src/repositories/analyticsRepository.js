@@ -14,6 +14,19 @@ const analyticsRepository = {
     });
   },
 
+  async listRadiusSearches({ from, to, userId }) {
+    const where = {
+      searchedAt: { gte: from, lt: to },
+      radiusKm: { not: null },
+    };
+    if (userId) where.userId = userId;
+    return prisma.searchEvent.findMany({
+      where,
+      select: { radiusKm: true, searchedAt: true },
+      orderBy: { searchedAt: 'asc' },
+    });
+  },
+
   async logMany(events) {
     return prisma.analyticsEvent.createMany({ data: events });
   },
