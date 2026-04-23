@@ -173,7 +173,7 @@ function buildDistanceSummary(rows, isPersonal) {
     lastUpdatedAt,
     message: isPersonal
     ? "Segun tus busquedas recientes, prefieres viviendas hasta " + round2(preferred) + " km."
-    : "En general, los usuarios prefieren buscar hasta " + round2(preferred) + " km.",
+    : "La mayoria de usuarios prefiere viviendas hasta " + round2(preferred) + " km de su punto de busqueda.",
   };
 }
 

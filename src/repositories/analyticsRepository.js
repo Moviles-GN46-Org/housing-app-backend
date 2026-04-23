@@ -17,13 +17,18 @@ const analyticsRepository = {
   async listRadiusSearches({ from, to, userId }) {
     const where = {
       searchedAt: { gte: from, lt: to },
-      radiusKm: { not: null },
+      radiusKm: {
+        not: null,
+        gt: 0,
+        lte: 30,
+      },
     };
+    
     if (userId) where.userId = userId;
     return prisma.searchEvent.findMany({
       where,
       select: { radiusKm: true, searchedAt: true },
-      orderBy: { searchedAt: 'asc' },
+      orderBy: { searchedAt: "asc" },
     });
   },
 
