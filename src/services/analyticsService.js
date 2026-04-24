@@ -14,6 +14,7 @@ const VALID_EVENT_TYPES = [
   'SESSION_START', 'SESSION_END', 'SEARCH', 'PROPERTY_VIEW',
   'FILTER_APPLIED', 'FEATURE_CLICK', 'MAP_INTERACTION',
   'CHAT_STARTED', 'REVIEW_SUBMITTED', 'VISIT_SCHEDULED', 'CRASH', 'SUPPLY_DENSITY_CHECK',
+  'LOCATION_STATS_UPDATE',
 ];
 
 const VALID_SEARCH_SOURCES = ["house_list", "map"];
@@ -453,6 +454,7 @@ const analyticsService = {
     });
     return buildDistanceSummary(rows, true);
   },
+
   async getSupplyDensityStats() {
     return analyticsRepository.getSupplyDensityStats();
   },
@@ -507,9 +509,11 @@ const analyticsService = {
 
     return response;
   },
+
+  async getLocalidadStats() {
+    return analyticsRepository.getLocalidadStats();
+  },
   
 };
-
-
 
 module.exports = analyticsService;

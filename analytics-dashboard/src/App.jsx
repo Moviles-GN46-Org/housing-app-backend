@@ -4,6 +4,7 @@ import CrashRateCard from "./components/CrashRateCard";
 import FeatureUsageCard from "./components/FeatureUsageCard";
 import ZonesCard from "./components/ZonesCard";
 import SupplyDensityCard from "./components/SupplyDensityCard";
+import LocalidadChart from "./components/LocalidadChart"; 
 import { LayoutDashboard, Calendar, RefreshCw } from "lucide-react";
 
 export default function App() {
@@ -99,9 +100,12 @@ export default function App() {
             <FeatureUsageCard />
           </div>
           
-          {/* NUEVA TARJETA: Supply Density (BQ de Bryan) */}
           <div className="card-animate" style={{ animationDelay: "320ms" }}>
             <SupplyDensityCard />
+          </div>
+
+          <div className="card-animate" style={{ animationDelay: "400ms" }}>
+            <LocalidadChart />
           </div>
         </div>
       </main>

@@ -491,7 +491,7 @@ async acceptVisitProposal(chatId, messageId, selectedSlotId, studentId) {
 | POST   | `/api/auth/refresh`            | Auth       | Refresh access token                 |
 | GET    | `/api/auth/me`                 | Auth       | Get current user profile             |
 
-### 3.2 Properties
+### 3.2 Properties 
 | Method | Endpoint                       | Role       | Description                          |
 |--------|--------------------------------|------------|--------------------------------------|
 | GET    | `/api/properties`              | Auth       | Search/filter properties             |

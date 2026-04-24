@@ -11,7 +11,7 @@ const propertyController = {
         page: result.page,
         limit: result.limit,
       };
-
+      //Si hay promedio lo envia 
       if (result.averageMonthlyRent !== undefined) {
         responseData.averageMonthlyRent = result.averageMonthlyRent;
       }

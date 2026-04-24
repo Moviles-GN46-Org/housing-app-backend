@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { LocateFixed, Activity, Loader2, AlertCircle } from 'lucide-react'
 
 // Using the configured environment variable
-const API_URL = import.meta.env.VITE_API_URL || 'http://10.0.2.2:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function SupplyDensityCard() {
   const [data, setData] = useState(null);

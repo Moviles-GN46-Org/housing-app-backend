@@ -204,17 +204,26 @@ const analyticsRepository = {
       SELECT AVG((payload->>'value')::float) as "averageDensity", COUNT(*)::int as "totalChecks"
       FROM "AnalyticsEvent" WHERE "eventType"::text = 'SUPPLY_DENSITY_CHECK'
     `;
+    
     const stats = results[0];
+
     return {
-      total,
-      screens: byScreen.map((row) => ({
-        name: row.screenName || "Unknown",
-        crashes: row._count.id,
-      })),
-      averageDensity: stats.averageDensity || 0,
-      totalChecks: stats.totalChecks || 0,
-      status: (stats.averageDensity > 0.4) ? 'High Supply' : 'High Demand'
+      averageDensity: stats?.averageDensity || 0,
+      totalChecks: stats?.totalChecks || 0,
+      status: (stats?.averageDensity > 0.4) ? 'High Supply' : 'High Demand'
     };
+  },
+
+  async getLocalidadStats() {
+    return prisma.$queryRaw`
+      SELECT 
+        COALESCE(payload->>'localidad', 'Desconocida') AS "localidad", 
+        COUNT(*)::int AS "conteo"
+      FROM "AnalyticsEvent"
+      WHERE "eventType"::text = 'LOCATION_STATS_UPDATE'
+      GROUP BY payload->>'localidad'
+      ORDER BY "conteo" DESC
+    `;
   },
 };
 

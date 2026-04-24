@@ -27,7 +27,7 @@ const propertyService = {
       sortBy,
       page = 1,
       limit = 20,
-      includeAveragePrice = false,
+      includeAveragePrice = false, //Nuevo param flag agregado
       ...filters
     } = queryParams;
     const shouldIncludeAveragePrice = toBoolean(includeAveragePrice);
@@ -56,7 +56,7 @@ const propertyService = {
     const limitNum = parseInt(limit);
     const start = (pageNum - 1) * limitNum;
     const paginated = properties.slice(start, start + limitNum);
-    const averageMonthlyRent = shouldIncludeAveragePrice ? calculateAverageMonthlyRent(properties) : undefined;
+    const averageMonthlyRent = shouldIncludeAveragePrice ? calculateAverageMonthlyRent(properties) : undefined; //Lo calcula si la flag es true
 
     logger.debug('Property search completed', {
       total: properties.length,
@@ -70,7 +70,7 @@ const propertyService = {
       total: properties.length,
       page: pageNum,
       limit: limitNum,
-      ...(shouldIncludeAveragePrice ? { averageMonthlyRent } : {}),
+      ...(shouldIncludeAveragePrice ? { averageMonthlyRent } : {}), //Aca retorna el promedio
     };
   },
 
