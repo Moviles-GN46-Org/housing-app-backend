@@ -17,10 +17,10 @@ const analyticsRepository = {
   async listRadiusSearches({ from, to, userId }) {
     const where = {
       searchedAt: { gte: from, lt: to },
+      source: { not: "map" },
       radiusKm: {
         not: null,
         gt: 0,
-        lte: 30,
       },
     };
     
