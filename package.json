@@ -22,7 +22,8 @@
   "homepage": "https://github.com/Moviles-GN46-Org/housing-app-backend#readme",
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
-    "@prisma/client": "^7.7.0",
+    "@prisma/client": "^7.5.0",
+    "@turf/turf": "^7.3.5",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",

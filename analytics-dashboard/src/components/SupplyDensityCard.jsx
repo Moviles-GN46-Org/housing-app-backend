@@ -1,10 +1,8 @@
 import { useEffect, useState } from "react";
 import { LocateFixed, Activity, Loader2, AlertCircle } from "lucide-react";
 
-const RAW_API_BASE = "http://localhost:3000";
-
-const API_BASE = RAW_API_BASE.replace(/\/$/, "");
-const API_PREFIX = API_BASE.endsWith("/api") ? API_BASE : `${API_BASE}/api`;
+// Using the configured environment variable
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 export default function SupplyDensityCard() {
   const [data, setData] = useState(null);

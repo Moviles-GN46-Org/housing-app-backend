@@ -1,4 +1,6 @@
 const analyticsRepository = require("../repositories/analyticsRepository");
+const roommateRepository = require("../repositories/roommateRepository");
+const universityRepository = require("../repositories/universityRepository");
 const { ValidationError } = require("../utils/errors");
 const {
   normalizeText,
@@ -12,6 +14,7 @@ const VALID_EVENT_TYPES = [
   'SESSION_START', 'SESSION_END', 'SEARCH', 'PROPERTY_VIEW',
   'FILTER_APPLIED', 'FEATURE_CLICK', 'MAP_INTERACTION',
   'CHAT_STARTED', 'REVIEW_SUBMITTED', 'VISIT_SCHEDULED', 'CRASH', 'SUPPLY_DENSITY_CHECK',
+  'LOCATION_STATS_UPDATE',
 ];
 
 const VALID_SEARCH_SOURCES = ["house_list", "map"];
@@ -22,7 +25,30 @@ const MAX_SESSION_ID_LENGTH = 120;
 const MAX_QUERY_LENGTH = 500;
 const MAX_CITY_LENGTH = 120;
 const MAX_NEIGHBORHOOD_LENGTH = 120;
-const MAX_RADIUS_KM = 100;
+const MAX_RADIUS_KM = 500;
+const DEFAULT_APARTMENT_BUCKET_SIZE = 5;
+const DEFAULT_POPULAR_SIZES_LIMIT = 3;
+
+function toNumberOrNull(value, fieldName) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new ValidationError(`${fieldName} must be a valid number`);
+  }
+
+  return parsed;
+}
+
+function formatSizeBucket(bucketMinM2, bucketMaxM2) {
+  return `${bucketMinM2}-${bucketMaxM2} m2`;
+}
+
+function toBooleanFlag(value) {
+  return value === true || value === "true";
+}
 
 function toPositiveLimit(value) {
   if (value === undefined || value === null || value === "") {
@@ -87,6 +113,69 @@ function validateSearchSignal({
       "A valid search must include neighborhood, query, or lat/lng",
     );
   }
+}
+
+function parseDateRange(queryParams) {
+  const { from, to } = queryParams || {};
+  if (!from || !to) {
+    throw new ValidationError("from and to are required query params (ISO date)");
+  }
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+  if (Number.isNaN(fromDate.getTime()) || Number.isNaN(toDate.getTime())) {
+    throw new ValidationError("from and to must be valid ISO dates");
+  }
+  if (toDate <= fromDate) {
+    throw new ValidationError("to must be greater than from");
+  }
+  return { fromDate, toDate };
+}
+
+function round2(value) {
+  return value === null ? null : Number(value.toFixed(2));
+}
+
+function percentile(sortedValues, p) {
+  if (!sortedValues.length) return null;
+  const idx = (sortedValues.length - 1) * p;
+  const lower = Math.floor(idx);
+  const upper = Math.ceil(idx);
+  if (lower === upper) return sortedValues[lower];
+  const weight = idx - lower;
+  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * weight;
+}
+
+function buildDistanceSummary(rows, isPersonal) {
+  if (!rows.length) {
+    return {
+      preferredKm: null,
+      recommendedMaxKm: null,
+      maxObservedKm: null,
+      samples: 0,
+      lastUpdatedAt: null,
+      message: isPersonal
+      ? "Aun no tenemos suficientes busquedas tuyas para recomendar una distancia."
+      : "Aun no hay suficientes busquedas para calcular la recomendacion global.",
+    };
+  }
+  const values = rows
+  .map((r) => Number(r.radiusKm))
+  .filter((v) => Number.isFinite(v))
+  .sort((a, b) => a - b);
+  const preferred = percentile(values, 0.5);
+  const recommended = percentile(values, 0.75);
+  const maxObserved = values[values.length - 1];
+  const lastUpdatedAt = rows[rows.length - 1]?.searchedAt?.toISOString?.() || null;
+  return {
+    preferredKm: round2(preferred),
+    recommendedMaxKm: round2(recommended),
+    maxObservedKm: round2(maxObserved),
+    samples: values.length,
+    lastUpdatedAt,
+    message: isPersonal
+    ? "Segun tus busquedas recientes, prefieres viviendas hasta " + round2(preferred) + " km."
+    : "La mayoria de usuarios prefiere viviendas hasta " + round2(preferred) + " km de su punto de busqueda.",
+  };
 }
 
 const analyticsService = {
@@ -343,12 +432,88 @@ const analyticsService = {
     return analyticsRepository.getCrashStats({ from: fromDate, to: toDate });
   },
 
+  async getPreferredMaxDistanceSummary(queryParams) {
+    const { fromDate, toDate } = parseDateRange(queryParams);
+    const rows = await analyticsRepository.listRadiusSearches({
+      from: fromDate,
+      to: toDate,
+      userId: null,
+    });
+    return buildDistanceSummary(rows, false);
+  },
+  
+  async getMyPreferredMaxDistance(userId, queryParams) {
+    if (!userId) {
+      throw new ValidationError("Authenticated user is required");
+    }
+    const { fromDate, toDate } = parseDateRange(queryParams);
+    const rows = await analyticsRepository.listRadiusSearches({
+      from: fromDate,
+      to: toDate,
+      userId,
+    });
+    return buildDistanceSummary(rows, true);
+  },
+
   async getSupplyDensityStats() {
     return analyticsRepository.getSupplyDensityStats();
   },
+
+  async getPopularApartmentSizeNearUniversity(userId, options = {}) {
+    if (!userId) {
+      throw new ValidationError("userId is required");
+    }
+
+    const onlyPopularSize = toBooleanFlag(options.onlyPopularSize);
+
+    const profile = await roommateRepository.getProfile(userId);
+    const university = await universityRepository.resolveByName(profile?.university);
+
+    if (!university) {
+      throw new ValidationError("No university configuration available");
+    }
+
+    const radiusKm = toNumberOrNull(university.defaultRadiusKm, "defaultRadiusKm") || 2;
+    const popularSizes = await analyticsRepository.getPopularApartmentSizesNearLocation({
+      latitude: university.latitude,
+      longitude: university.longitude,
+      radiusKm,
+      limit: DEFAULT_POPULAR_SIZES_LIMIT,
+      bucketSize: DEFAULT_APARTMENT_BUCKET_SIZE,
+    });
+
+    const topSizes = popularSizes.map((row) => ({
+      sizeRange: formatSizeBucket(Number(row.bucketMinM2), Number(row.bucketMaxM2)),
+      bucketMinM2: Number(row.bucketMinM2),
+      bucketMaxM2: Number(row.bucketMaxM2),
+      count: Number(row.count),
+      averageSizeM2: Number(row.avgSizeM2),
+    }));
+
+    const response = {
+      university: {
+        id: university.id,
+        name: university.name,
+        city: university.city || null,
+        latitude: university.latitude,
+        longitude: university.longitude,
+        radiusKm,
+      },
+      topSizes,
+      popularSize: topSizes[0] || null,
+    };
+
+    if (onlyPopularSize) {
+      return { popularSize: response.popularSize };
+    }
+
+    return response;
+  },
+
+  async getLocalidadStats() {
+    return analyticsRepository.getLocalidadStats();
+  },
   
 };
-
-
 
 module.exports = analyticsService;

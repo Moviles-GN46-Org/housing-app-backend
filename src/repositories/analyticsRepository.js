@@ -14,6 +14,24 @@ const analyticsRepository = {
     });
   },
 
+  async listRadiusSearches({ from, to, userId }) {
+    const where = {
+      searchedAt: { gte: from, lt: to },
+      source: { not: "map" },
+      radiusKm: {
+        not: null,
+        gt: 0,
+      },
+    };
+    
+    if (userId) where.userId = userId;
+    return prisma.searchEvent.findMany({
+      where,
+      select: { radiusKm: true, searchedAt: true },
+      orderBy: { searchedAt: "asc" },
+    });
+  },
+
   async logMany(events) {
     return prisma.analyticsEvent.createMany({ data: events });
   },
@@ -54,6 +72,37 @@ const analyticsRepository = {
 
   async createSearchEvent(data) {
     return prisma.searchEvent.create({ data });
+  },
+
+  async getPopularApartmentSizesNearLocation({ latitude, longitude, radiusKm, limit = 3, bucketSize = 5 }) {
+    return prisma.$queryRaw`
+      WITH nearby_properties AS (
+        SELECT
+          "sizeM2",
+          FLOOR("sizeM2" / ${bucketSize})::int * ${bucketSize} AS "bucketMinM2"
+        FROM "Property"
+        WHERE "status" = 'ACTIVE'
+          AND "propertyType" = 'APARTMENT'
+          AND "sizeM2" IS NOT NULL
+          AND (
+            6371 * ACOS(
+              LEAST(1, GREATEST(-1,
+                COS(RADIANS(${latitude})) * COS(RADIANS("latitude")) * COS(RADIANS("longitude") - RADIANS(${longitude})) +
+                SIN(RADIANS(${latitude})) * SIN(RADIANS("latitude"))
+              ))
+            )
+          ) <= ${radiusKm}
+      )
+      SELECT
+        "bucketMinM2",
+        ("bucketMinM2" + ${bucketSize} - 1)::int AS "bucketMaxM2",
+        COUNT(*)::int AS "count",
+        ROUND(AVG("sizeM2")::numeric, 1)::float AS "avgSizeM2"
+      FROM nearby_properties
+      GROUP BY "bucketMinM2"
+      ORDER BY "count" DESC, "bucketMinM2" ASC
+      LIMIT ${limit}
+    `;
   },
 
   async getTopSearchedZonesCurrent({ from, to, city, limit }) {
@@ -162,13 +211,26 @@ const analyticsRepository = {
       FROM "AnalyticsEvent" WHERE "eventType"::text = 'SUPPLY_DENSITY_CHECK'
     `;
 
+    
     const stats = results[0];
 
     return {
       averageDensity: stats?.averageDensity || 0,
       totalChecks: stats?.totalChecks || 0,
-      status: stats?.averageDensity > 0.4 ? "High Supply" : "High Demand",
+      status: (stats?.averageDensity > 0.4) ? 'High Supply' : 'High Demand'
     };
+  },
+
+  async getLocalidadStats() {
+    return prisma.$queryRaw`
+      SELECT 
+        COALESCE(payload->>'localidad', 'Desconocida') AS "localidad", 
+        COUNT(*)::int AS "conteo"
+      FROM "AnalyticsEvent"
+      WHERE "eventType"::text = 'LOCATION_STATS_UPDATE'
+      GROUP BY payload->>'localidad'
+      ORDER BY "conteo" DESC
+    `;
   },
 };
 

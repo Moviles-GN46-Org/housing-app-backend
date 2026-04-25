@@ -11,6 +11,17 @@ const {
 
 const distanceFilter = new DistanceFilter();
 
+function toBoolean(value) {
+  return value === true || value === 'true';
+}
+
+function calculateAverageMonthlyRent(properties) {
+  if (!properties.length) return null;
+
+  const totalRent = properties.reduce((sum, property) => sum + Number(property.monthlyRent), 0);
+  return parseFloat((totalRent / properties.length).toFixed(2));
+}
+
 const propertyService = {
   async search(queryParams) {
     const {
@@ -20,8 +31,10 @@ const propertyService = {
       sortBy,
       page = 1,
       limit = 20,
+      includeAveragePrice = false, //Nuevo param flag agregado
       ...filters
     } = queryParams;
+    const shouldIncludeAveragePrice = toBoolean(includeAveragePrice);
 
     let properties = await propertyRepository.findByFilters(filters);
     const beforeFilter = properties.length;
@@ -47,6 +60,14 @@ const propertyService = {
     const limitNum = parseInt(limit);
     const start = (pageNum - 1) * limitNum;
     const paginated = properties.slice(start, start + limitNum);
+    const averageMonthlyRent = shouldIncludeAveragePrice ? calculateAverageMonthlyRent(properties) : undefined; //Lo calcula si la flag es true
+
+    logger.debug('Property search completed', {
+      total: properties.length,
+      returned: paginated.length,
+      filters,
+      includeAveragePrice: shouldIncludeAveragePrice,
+    });
 
     logger.debug("Property search completed", {
       total: properties.length,
@@ -58,6 +79,7 @@ const propertyService = {
       total: properties.length,
       page: pageNum,
       limit: limitNum,
+      ...(shouldIncludeAveragePrice ? { averageMonthlyRent } : {}), //Aca retorna el promedio
     };
   },
 

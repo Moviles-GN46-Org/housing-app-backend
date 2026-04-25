@@ -491,7 +491,7 @@ async acceptVisitProposal(chatId, messageId, selectedSlotId, studentId) {
 | POST   | `/api/auth/refresh`            | Auth       | Refresh access token                 |
 | GET    | `/api/auth/me`                 | Auth       | Get current user profile             |
 
-### 3.2 Properties
+### 3.2 Properties 
 | Method | Endpoint                       | Role       | Description                          |
 |--------|--------------------------------|------------|--------------------------------------|
 | GET    | `/api/properties`              | Auth       | Search/filter properties             |
@@ -514,7 +514,10 @@ async acceptVisitProposal(chatId, messageId, selectedSlotId, studentId) {
 &sortBy=price|distance|recent
 &page=1
 &limit=20
+&includeAveragePrice=true|false
 ```
+
+When `includeAveragePrice=true`, the response payload also includes `data.averageMonthlyRent`, calculated from the full filtered result set before pagination.
 
 ### 3.3 Reviews
 | Method | Endpoint                            | Role     | Description                          |

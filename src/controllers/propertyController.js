@@ -5,14 +5,20 @@ const propertyController = {
   async search(req, res, next) {
     try {
       const result = await propertyService.search(req.query);
+      const responseData = {
+        properties: result.properties.map(toPropertyDTO),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+      };
+      //Si hay promedio lo envia 
+      if (result.averageMonthlyRent !== undefined) {
+        responseData.averageMonthlyRent = result.averageMonthlyRent;
+      }
+
       res.json({
         success: true,
-        data: {
-          properties: result.properties.map(toPropertyDTO),
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
-        },
+        data: responseData,
       });
     } catch (err) {
       next(err);
