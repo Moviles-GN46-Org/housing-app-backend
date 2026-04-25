@@ -94,13 +94,6 @@ export default function SupplyDensityCard() {
           </p>
         </div>
       </div>
-      
-      {/* BQ Footer */}
-      <div className="mt-auto bg-[#FBF3EB] px-6 py-3 border-t border-[#E8DDD4]">
-        <p className="text-[10px] text-taupe font-bold uppercase tracking-widest text-center">
-          Business Question implemented by Bryan
-        </p>
-      </div>
     </div>
   )
 }

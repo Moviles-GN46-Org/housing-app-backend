@@ -7,11 +7,10 @@ const geojsonPath = path.join(__dirname, '../../docs/geojson/poligonosbogota.geo
 
 let geojsonData = null;
 
-// Cargamos el archivo una sola vez al iniciar el servidor para mayor eficiencia
 try {
     const rawData = fs.readFileSync(geojsonPath, 'utf8');
     geojsonData = JSON.parse(rawData);
-    console.log('✅ GeoJSON de localidades cargado correctamente.');
+    console.log('GeoJSON de localidades cargado correctamente.');
 } catch (error) {
     console.error('Error cargando el archivo GeoJSON:', error.message);
 }

@@ -39,8 +39,8 @@ const LocalidadChart = () => {
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h3 className="text-lg font-bold text-gray-800">Uso por Localidad (Bogotá)</h3>
-          <p className="text-sm text-gray-500">Distribución de usuarios según su ubicación actual</p>
+          <h3 className="text-lg font-bold text-gray-800">Roommate Interest by Locality</h3>
+          <p className="text-sm text-gray-500">How many users are looking for roommates in a specific zone?</p>
         </div>
       </div>
 
