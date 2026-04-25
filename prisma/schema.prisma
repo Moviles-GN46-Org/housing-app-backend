@@ -23,17 +23,22 @@ model User {
   chatParticipations   ChatParticipant[]
   Favorite             Favorite[]
   landlordVerification LandlordVerification?
-  sentMessages         Message[]             @relation("MessageSender")
-  notifications        Notification[]
-  properties           Property[]
-  reportsReceived      Report[]              @relation("ReportedUser")
-  reports              Report[]              @relation("ReportAuthor")
-  reviewsWritten       Review[]              @relation("ReviewAuthor")
-  reviewsReceived      Review[]              @relation("ReviewedLandlord")
-  roommateProfile      RoommateProfile?
-  swipesReceived       RoommateSwipe[]       @relation("Swiped")
-  swipesMade           RoommateSwipe[]       @relation("Swiper")
-  searchEvents         SearchEvent[]
+
+  // Relations
+  properties         Property[]         // Landlord's listings
+  reviewsWritten     Review[]           @relation("ReviewAuthor")
+  reviewsReceived    Review[]           @relation("ReviewedLandlord")
+  sentMessages       Message[]          @relation("MessageSender")
+  chatParticipations ChatParticipant[]
+  reports            Report[]           @relation("ReportAuthor")
+  reportsReceived    Report[]           @relation("ReportedUser")
+  roommateProfile    RoommateProfile?
+  swipesMade         RoommateSwipe[]    @relation("Swiper")
+  swipesReceived     RoommateSwipe[]    @relation("Swiped")
+  analyticsEvents    AnalyticsEvent[]
+  searchEvents       SearchEvent[]
+  notifications      Notification[]
+  favorites          Favorite[]
   studentVerification  StudentVerification?
 
   @@index([role])
@@ -116,6 +121,7 @@ model Property {
   Favorite          Favorite[]
   landlord          User           @relation(fields: [landlordId], references: [id], onDelete: Cascade)
   reports           Report[]
+  favorites         Favorite[]
   reviews           Review[]
 
   @@index([status])
@@ -437,6 +443,29 @@ enum SwipeDirection {
   LEFT
 }
 
+// ============================================================
+// 9. FAVORITES SYSTEM (User's saved properties)
+// ============================================================
+
+model Favorite {
+  id          String   @id @default(uuid())
+  userId      String
+  propertyId  String
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId]) // One favorite per user per property
+  @@index([userId])
+  @@index([propertyId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// 10. NOTIFICATIONS
+// ============================================================
+
 enum NotificationType {
   NEW_MESSAGE
   VISIT_REMINDER
@@ -450,6 +479,41 @@ enum NotificationType {
   VERIFICATION_REJECTED
   PROPERTY_MATCH
 }
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String
+  type        NotificationType
+  title       String
+  body        String
+  data        Json?            // Additional context (propertyId, chatId, etc.)
+  isRead      Boolean          @default(false)
+  createdAt   DateTime         @default(now())
+
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@index([createdAt])
+}
+
+// ============================================================
+// 11. ANALYTICS EVENTS (Generic event store)
+// ============================================================
+// Single table approach - flexible JSON payload per event type
+//
+// Event types and their expected payloads:
+//
+// SESSION_START:    { device, os, appVersion }
+// SESSION_END:      { durationSeconds }
+// SEARCH:           { filters: { petFriendly, maxPrice, ... }, resultsCount }
+// PROPERTY_VIEW:    { propertyId, source: "map"|"list"|"search" }
+// FILTER_APPLIED:   { filterName, filterValue }
+// FEATURE_CLICK:    { feature: "roommate_finder"|"chat"|"reviews"|... }
+// MAP_INTERACTION:  { action: "zoom"|"pan"|"search_area", location }
+// CHAT_STARTED:     { propertyId, landlordId }
+// REVIEW_SUBMITTED: { propertyId, rating }
+// VISIT_SCHEDULED:  { propertyId, chatId }
+// CRASH:            { screen, errorMessage, stackTrace }
 
 enum AnalyticsEventType {
   SESSION_START
