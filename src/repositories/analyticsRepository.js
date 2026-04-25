@@ -177,6 +177,34 @@ const analyticsRepository = {
     return { overall: overall[0] || null, daily };
   },
 
+  async getFeatureLoadTimes({ from, to } = {}) {
+    // Raw query for PERCENTILE_CONT support; the Prisma Client doesn't expose
+    // it directly, and we need median/p95 to tell "usually fast with outliers"
+    // from "consistently slow" on the dashboard.
+    const dateFilter =
+      from && to
+        ? Prisma.sql`AND "timestamp" >= ${from} AND "timestamp" <= ${to}`
+        : from
+        ? Prisma.sql`AND "timestamp" >= ${from}`
+        : to
+        ? Prisma.sql`AND "timestamp" <= ${to}`
+        : Prisma.empty;
+
+    return prisma.$queryRaw`
+      SELECT
+        "screenName"                                                                          AS "name",
+        COUNT(*)::int                                                                         AS "samples",
+        ROUND(AVG((payload->>'durationMs')::float)::numeric, 0)::int                          AS "avgMs",
+        PERCENTILE_CONT(0.5)  WITHIN GROUP (ORDER BY (payload->>'durationMs')::float)::int    AS "medianMs",
+        PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY (payload->>'durationMs')::float)::int    AS "p95Ms"
+      FROM "AnalyticsEvent"
+      WHERE "eventType" = 'FEATURE_LOAD_TIME' AND "screenName" IS NOT NULL
+      ${dateFilter}
+      GROUP BY "screenName"
+      ORDER BY "samples" DESC
+    `;
+  },
+
   async getCrashStats({ from, to }) {
     const dateFilter = {};
     if (from) dateFilter.gte = from;

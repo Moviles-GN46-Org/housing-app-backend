@@ -15,7 +15,10 @@ const VALID_EVENT_TYPES = [
   'FILTER_APPLIED', 'FEATURE_CLICK', 'MAP_INTERACTION',
   'CHAT_STARTED', 'REVIEW_SUBMITTED', 'VISIT_SCHEDULED', 'CRASH', 'SUPPLY_DENSITY_CHECK',
   'LOCATION_STATS_UPDATE',
+  'FEATURE_LOAD_TIME',
 ];
+
+const MAX_FEATURE_LOAD_DURATION_MS = 120000;
 
 const VALID_SEARCH_SOURCES = ["house_list", "map"];
 const DEDUPE_WINDOW_SECONDS = 45;
@@ -189,6 +192,17 @@ const analyticsService = {
       throw new ValidationError(
         `eventType must be one of: ${VALID_EVENT_TYPES.join(", ")}`,
       );
+    }
+    if (eventType === 'FEATURE_LOAD_TIME') {
+      // Defend against garbage values from bad foreground/background
+      // transitions or client clock skew. Out-of-range events are rejected
+      // rather than clamped so bad data never lands in the stats table.
+      const durationMs = Number(payload.durationMs);
+      if (!Number.isFinite(durationMs) || durationMs < 0 || durationMs > MAX_FEATURE_LOAD_DURATION_MS) {
+        throw new ValidationError(
+          `payload.durationMs must be a number between 0 and ${MAX_FEATURE_LOAD_DURATION_MS}`,
+        );
+      }
     }
     return analyticsRepository.logEvent({
       userId,
@@ -430,6 +444,43 @@ const analyticsService = {
     }
 
     return analyticsRepository.getCrashStats({ from: fromDate, to: toDate });
+  },
+
+  async getFeatureLoadTimes(queryParams) {
+    const { from, to } = queryParams || {};
+    let fromDate = null;
+    let toDate = null;
+
+    if (from) {
+      fromDate = new Date(from);
+      if (Number.isNaN(fromDate.getTime())) {
+        throw new ValidationError("from must be a valid ISO date");
+      }
+    }
+    if (to) {
+      toDate = new Date(to);
+      if (Number.isNaN(toDate.getTime())) {
+        throw new ValidationError("to must be a valid ISO date");
+      }
+    }
+    if (fromDate && toDate && toDate <= fromDate) {
+      throw new ValidationError("to must be greater than from");
+    }
+
+    const rows = await analyticsRepository.getFeatureLoadTimes({
+      from: fromDate,
+      to: toDate,
+    });
+
+    return {
+      screens: rows.map((row) => ({
+        name: row.name,
+        samples: Number(row.samples),
+        avgMs: Number(row.avgMs),
+        medianMs: Number(row.medianMs),
+        p95Ms: Number(row.p95Ms),
+      })),
+    };
   },
 
   async getPreferredMaxDistanceSummary(queryParams) {

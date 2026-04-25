@@ -4,7 +4,8 @@ import CrashRateCard from "./components/CrashRateCard";
 import FeatureUsageCard from "./components/FeatureUsageCard";
 import ZonesCard from "./components/ZonesCard";
 import SupplyDensityCard from "./components/SupplyDensityCard";
-import LocalidadChart from "./components/LocalidadChart"; 
+import LocalidadChart from "./components/LocalidadChart";
+import FeatureLoadTimeCard from "./components/FeatureLoadTimeCard";
 import { LayoutDashboard, Calendar, RefreshCw } from "lucide-react";
 
 export default function App() {
@@ -106,6 +107,10 @@ export default function App() {
 
           <div className="card-animate" style={{ animationDelay: "400ms" }}>
             <LocalidadChart />
+          </div>
+
+          <div className="card-animate" style={{ animationDelay: "480ms" }}>
+            <FeatureLoadTimeCard />
           </div>
         </div>
       </main>

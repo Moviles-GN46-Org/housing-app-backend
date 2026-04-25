@@ -114,6 +114,15 @@ const analyticsController = {
     }
   },
 
+  async getFeatureLoadTimes(req, res, next) {
+    try {
+      const data = await analyticsService.getFeatureLoadTimes(req.query);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getSupplyDensity(req, res, next) {
     try {
       const data = await analyticsService.getSupplyDensityStats();
