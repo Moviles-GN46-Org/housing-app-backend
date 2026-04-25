@@ -19,9 +19,6 @@ model User {
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-  analyticsEvents      AnalyticsEvent[]
-  chatParticipations   ChatParticipant[]
-  Favorite             Favorite[]
   landlordVerification LandlordVerification?
 
   // Relations
@@ -118,7 +115,6 @@ model Property {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   chats             Chat[]
-  Favorite          Favorite[]
   landlord          User           @relation(fields: [landlordId], references: [id], onDelete: Cascade)
   reports           Report[]
   favorites         Favorite[]
@@ -334,20 +330,6 @@ model SearchEvent {
   @@index([filtersHash])
 }
 
-model Favorite {
-  id         String   @id
-  userId     String
-  propertyId String
-  createdAt  DateTime @default(now())
-  Property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, propertyId])
-  @@index([createdAt])
-  @@index([propertyId])
-  @@index([userId])
-}
-
 enum UserRole {
   STUDENT
   LANDLORD
@@ -478,22 +460,6 @@ enum NotificationType {
   VERIFICATION_APPROVED
   VERIFICATION_REJECTED
   PROPERTY_MATCH
-}
-
-model Notification {
-  id          String           @id @default(uuid())
-  userId      String
-  type        NotificationType
-  title       String
-  body        String
-  data        Json?            // Additional context (propertyId, chatId, etc.)
-  isRead      Boolean          @default(false)
-  createdAt   DateTime         @default(now())
-
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, isRead])
-  @@index([createdAt])
 }
 
 // ============================================================
