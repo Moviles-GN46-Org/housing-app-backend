@@ -1,0 +1,5 @@
+-- AlterEnum
+ALTER TYPE "AnalyticsEventType" ADD VALUE IF NOT EXISTS 'LOCATION_STATS_UPDATE';
+
+-- AlterEnum
+ALTER TYPE "AnalyticsEventType" ADD VALUE IF NOT EXISTS 'SESSION_EVENT';

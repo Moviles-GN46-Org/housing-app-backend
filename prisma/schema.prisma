@@ -34,6 +34,7 @@ model User {
   swipesReceived     RoommateSwipe[]    @relation("Swiped")
   analyticsEvents    AnalyticsEvent[]
   searchEvents       SearchEvent[]
+  searchFilterUsages SearchFilterUsage[]
   notifications      Notification[]
   favorites          Favorite[]
   studentVerification  StudentVerification?
@@ -328,6 +329,24 @@ model SearchEvent {
   @@index([sessionId, searchedAt])
   @@index([userId, searchedAt])
   @@index([filtersHash])
+}
+
+model SearchFilterUsage {
+  id             String   @id @default(uuid())
+  userId         String?
+  sessionId      String
+  filterCategory String
+  filterValue    String
+  metadata       Json?
+  appliedAt      DateTime @default(now())
+  createdAt      DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([appliedAt])
+  @@index([filterCategory])
+  @@index([filterCategory, filterValue])
+  @@index([sessionId, appliedAt])
+  @@index([userId, appliedAt])
 }
 
 enum UserRole {

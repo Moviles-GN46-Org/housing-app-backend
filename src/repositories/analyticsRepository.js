@@ -23,7 +23,7 @@ const analyticsRepository = {
         gt: 0,
       },
     };
-    
+
     if (userId) where.userId = userId;
     return prisma.searchEvent.findMany({
       where,
@@ -74,7 +74,31 @@ const analyticsRepository = {
     return prisma.searchEvent.create({ data });
   },
 
-  async getPopularApartmentSizesNearLocation({ latitude, longitude, radiusKm, limit = 3, bucketSize = 5 }) {
+  async createSearchFilterUsages(entries) {
+    return prisma.searchFilterUsage.createMany({ data: entries });
+  },
+
+  async getTopFilters({ from, to }) {
+    const fromClause = from
+      ? Prisma.sql`AND "appliedAt" >= ${from}`
+      : Prisma.empty;
+    const toClause = to ? Prisma.sql`AND "appliedAt" <  ${to}` : Prisma.empty;
+    return prisma.$queryRaw`
+      SELECT "filterCategory", "filterValue", COUNT(*)::int AS "count"
+      FROM "SearchFilterUsage"
+      WHERE 1=1 ${fromClause} ${toClause}
+      GROUP BY "filterCategory", "filterValue"
+      ORDER BY "filterCategory" ASC, "count" DESC
+    `;
+  },
+
+  async getPopularApartmentSizesNearLocation({
+    latitude,
+    longitude,
+    radiusKm,
+    limit = 3,
+    bucketSize = 5,
+  }) {
     return prisma.$queryRaw`
       WITH nearby_properties AS (
         SELECT
@@ -211,13 +235,12 @@ const analyticsRepository = {
       FROM "AnalyticsEvent" WHERE "eventType"::text = 'SUPPLY_DENSITY_CHECK'
     `;
 
-    
     const stats = results[0];
 
     return {
       averageDensity: stats?.averageDensity || 0,
       totalChecks: stats?.totalChecks || 0,
-      status: (stats?.averageDensity > 0.4) ? 'High Supply' : 'High Demand'
+      status: stats?.averageDensity > 0.4 ? "High Supply" : "High Demand",
     };
   },
 

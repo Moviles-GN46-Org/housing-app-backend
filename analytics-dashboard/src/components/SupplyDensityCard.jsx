@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { LocateFixed, Activity, Loader2, AlertCircle } from "lucide-react";
 
 // Using the configured environment variable
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
 
 export default function SupplyDensityCard() {
   const [data, setData] = useState(null);
@@ -12,7 +12,7 @@ export default function SupplyDensityCard() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch(`${API_PREFIX}/analytics/supply-density`);
+        const response = await fetch(`${API_URL}/analytics/supply-density`);
         if (!response.ok) throw new Error("Network error");
         const json = await response.json();
         setData(json.data);
@@ -31,7 +31,7 @@ export default function SupplyDensityCard() {
     return (
       <div className="bg-white_card rounded-2xl border border-[#E8DDD4] p-12 flex flex-col items-center justify-center">
         <Loader2 className="animate-spin text-bronze mb-2" size={24} />
-        <p className="text-taupe text-xs">Loading Bryan's metrics...</p>
+        <p className="text-taupe text-xs">Loading metrics...</p>
       </div>
     );
   }
@@ -42,7 +42,7 @@ export default function SupplyDensityCard() {
         <AlertCircle className="text-rose-400 mb-2" size={24} />
         <p className="text-mocha font-medium text-sm">Connection Error</p>
         <p className="text-taupe text-xs">
-          Check that the backend is running at {API_BASE}
+          Check that the backend is running at {API_URL}
         </p>
       </div>
     );
@@ -117,13 +117,6 @@ export default function SupplyDensityCard() {
             properties found within a 5km radius by users.
           </p>
         </div>
-      </div>
-
-      {/* BQ Footer */}
-      <div className="mt-auto bg-[#FBF3EB] px-6 py-3 border-t border-[#E8DDD4]">
-        <p className="text-[10px] text-taupe font-bold uppercase tracking-widest text-center">
-          Business Question implemented by Bryan
-        </p>
       </div>
     </div>
   );

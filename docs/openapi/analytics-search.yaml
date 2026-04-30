@@ -6,6 +6,68 @@ info:
 servers:
   - url: http://localhost:3000/api
 paths:
+  /analytics/search-filter-usages:
+    post:
+      summary: Track usage of search filters (generic categories and values)
+      description: |
+        Stores selected filters as category/value pairs.
+        The backend does not enforce a fixed catalog of categories or values,
+        so frontend filter definitions can evolve without backend changes.
+      tags:
+        - Analytics
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchFilterUsageRequest"
+            examples:
+              multiple:
+                summary: Multiple selected filters
+                value:
+                  sessionId: s_abc_123
+                  filters:
+                    - category: budget
+                      value: 600k_900k
+                    - category: amenities
+                      value: wifi
+                    - category: location
+                      value: chapinero
+                      metadata:
+                        uiSource: filter_drawer
+              single:
+                summary: Single selected filter
+                value:
+                  sessionId: s_abc_123
+                  filter:
+                    category: utilities
+                    value: included
+      responses:
+        "201":
+          description: Filter usage stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SearchFilterUsageResponse"
+              examples:
+                created:
+                  value:
+                    success: true
+                    data:
+                      stored: 3
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Too many requests
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /analytics/search-events:
     post:
       summary: Track a housing search event
@@ -19,7 +81,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SearchEventRequest'
+              $ref: "#/components/schemas/SearchEventRequest"
             examples:
               basic:
                 summary: Search from house list
@@ -48,12 +110,12 @@ paths:
                   neighborhood: Chapinero
                   source: map
       responses:
-        '201':
+        "201":
           description: Search event processed
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SearchEventResponse'
+                $ref: "#/components/schemas/SearchEventResponse"
               examples:
                 created:
                   value:
@@ -67,18 +129,18 @@ paths:
                     data:
                       id: 3a7ea985-6cf4-4e86-8f36-193a498412fd
                       deduped: true
-        '400':
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '429':
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
           description: Too many requests
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
   /analytics/top-searched-zones:
     get:
@@ -119,12 +181,12 @@ paths:
             maximum: 50
             default: 10
       responses:
-        '200':
+        "200":
           description: Aggregated zones ranking
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TopSearchedZonesResponse'
+                $ref: "#/components/schemas/TopSearchedZonesResponse"
               examples:
                 top10:
                   value:
@@ -141,12 +203,12 @@ paths:
                           searches: 87
                           uniqueUsers: 63
                           trendVsPreviousPeriod: -4.2
-        '400':
+        "400":
           description: Validation error
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -218,6 +280,60 @@ components:
             deduped:
               type: boolean
 
+    FilterUsageItem:
+      type: object
+      required:
+        - category
+        - value
+      properties:
+        category:
+          type: string
+          maxLength: 120
+        value:
+          type: string
+          maxLength: 120
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+    SearchFilterUsageRequest:
+      type: object
+      required:
+        - sessionId
+      properties:
+        userId:
+          type: string
+          nullable: true
+          description: Nullable for anonymous usage events
+        sessionId:
+          type: string
+          maxLength: 120
+        appliedAt:
+          type: string
+          format: date-time
+          nullable: true
+        filter:
+          $ref: "#/components/schemas/FilterUsageItem"
+        filters:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/FilterUsageItem"
+
+    SearchFilterUsageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            stored:
+              type: integer
+
     TopZone:
       type: object
       properties:
@@ -247,7 +363,7 @@ components:
             zones:
               type: array
               items:
-                $ref: '#/components/schemas/TopZone'
+                $ref: "#/components/schemas/TopZone"
 
     ErrorResponse:
       type: object
