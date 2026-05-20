@@ -33,7 +33,7 @@ describe('integration: roommate profile extended fields', () => {
     await prisma.$disconnect();
   });
 
-  test('persists birthDate/job/university and exposes Roomie-compatible fields', async () => {
+  test('persists birthDate/job/university and exposes recommended score metadata', async () => {
     const me = await createStudent('me', 'Ana');
     const other = await createStudent('other', 'Luis');
 
@@ -76,6 +76,7 @@ describe('integration: roommate profile extended fields', () => {
     expect(profileDto.university).toBe('Uniandes');
     expect(profileDto.age).toBeGreaterThan(0);
     expect(profileDto.matchRate).toBe(0);
+    expect(profileDto.matchReasons).toEqual([]);
 
     const candidates = await roommateService.getCandidates(me.id);
     const candidateDto = toRoommateProfileDTO(candidates[0]);
@@ -83,5 +84,51 @@ describe('integration: roommate profile extended fields', () => {
     expect(candidateDto.userId).toBe(other.id);
     expect(candidateDto.matchRate).toBeGreaterThan(0);
     expect(candidateDto.compatibilityScore).toBe(candidateDto.matchRate);
+    expect(candidateDto.scoreBreakdown.length).toBeGreaterThan(0);
+    expect(candidateDto.matchReasons).toContain('same_preferred_area');
+    expect(candidateDto.matchReasons).toContain('same_sleep_schedule');
+  });
+
+  test('excludes already swiped candidates from the recommendation list', async () => {
+    const me = await createStudent('me2', 'Maria');
+    const other = await createStudent('other2', 'Carlos');
+
+    await roommateService.upsertProfile(me.id, {
+      sleepSchedule: 'FLEXIBLE',
+      cleanlinessLevel: 'MODERATE',
+      noisePreference: 'MODERATE',
+      smokes: false,
+      hasPets: true,
+      budgetMin: 800,
+      budgetMax: 1500,
+      preferredArea: 'Chapinero',
+      bio: 'Looking for a roommate',
+      birthDate: '2002-02-02',
+      job: 'Developer',
+      university: 'Uniandes',
+    });
+
+    await roommateService.upsertProfile(other.id, {
+      sleepSchedule: 'FLEXIBLE',
+      cleanlinessLevel: 'MODERATE',
+      noisePreference: 'MODERATE',
+      smokes: false,
+      hasPets: true,
+      budgetMin: 850,
+      budgetMax: 1400,
+      preferredArea: 'Chapinero',
+      bio: 'Ready to share',
+      birthDate: '2001-03-03',
+      job: 'Designer',
+      university: 'Javeriana',
+    });
+
+    const beforeSwipe = await roommateService.getCandidates(me.id);
+    expect(beforeSwipe.map((candidate) => candidate.userId)).toContain(other.id);
+
+    await roommateService.swipe(me.id, { swipedUserId: other.id, direction: 'RIGHT' });
+
+    const afterSwipe = await roommateService.getCandidates(me.id);
+    expect(afterSwipe.map((candidate) => candidate.userId)).not.toContain(other.id);
   });
 });

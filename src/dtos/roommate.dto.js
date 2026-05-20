@@ -16,6 +16,10 @@ function toRoommateProfileDTO(profile) {
   const user = profile.user || {};
   const compatibilityScore = Number(profile.compatibilityScore ?? 0);
   const matchRate = Number(profile.matchRate ?? compatibilityScore ?? 0);
+  const scoreBreakdown = Array.isArray(profile.scoreBreakdown) ? profile.scoreBreakdown : [];
+  const matchReasons = Array.isArray(profile.matchReasons)
+    ? profile.matchReasons
+    : scoreBreakdown.map((item) => item.label).filter(Boolean);
 
   return {
     id: profile.id,
@@ -38,6 +42,8 @@ function toRoommateProfileDTO(profile) {
     age: computeAge(profile.birthDate),
     matchRate,
     compatibilityScore,
+    scoreBreakdown,
+    matchReasons,
     job: profile.job || '',
     university: profile.university || '',
   };

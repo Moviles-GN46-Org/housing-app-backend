@@ -1,12 +1,16 @@
 class MatchingStrategy {
   /**
-   * Score compatibility between two roommate profiles.
+   * Evaluate compatibility between two roommate profiles.
    * @param {object} profileA
    * @param {object} profileB
-   * @returns {number} Score from 0 to 100
+   * @returns {{score: number, breakdown: Array<object>}}
    */
+  evaluate(profileA, profileB) {
+    throw new Error('evaluate() must be implemented');
+  }
+
   score(profileA, profileB) {
-    throw new Error('score() must be implemented');
+    return this.evaluate(profileA, profileB).score;
   }
 }
 

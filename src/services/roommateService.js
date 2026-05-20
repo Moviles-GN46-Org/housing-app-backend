@@ -70,17 +70,23 @@ class RoommateService {
     const myProfile = await roommateRepository.getProfile(userId);
     if (!myProfile) throw new NotFoundError('Create your roommate profile first');
 
-    const alreadySwiped = await roommateRepository.getAlreadySwiped(userId);
-    const allProfiles = await roommateRepository.getActiveProfiles(userId);
+    const allProfiles = await roommateRepository.getCandidateProfiles(userId);
 
     const candidates = allProfiles
-      .filter((p) => !alreadySwiped.includes(p.userId))
       .map((p) => {
-        const score = this.strategy.score(myProfile, p);
+        const evaluation = typeof this.strategy.evaluate === 'function'
+          ? this.strategy.evaluate(myProfile, p)
+          : { score: this.strategy.score(myProfile, p), breakdown: [] };
+
+        const score = Number(evaluation?.score ?? 0);
+        const breakdown = Array.isArray(evaluation?.breakdown) ? evaluation.breakdown : [];
+
         return {
           ...p,
           compatibilityScore: score,
           matchRate: score,
+          scoreBreakdown: breakdown,
+          matchReasons: breakdown.map((item) => item.label).filter(Boolean),
         };
       })
       .sort((a, b) => b.compatibilityScore - a.compatibilityScore);
