@@ -6,7 +6,8 @@ import ZonesCard from "./components/ZonesCard";
 import SupplyDensityCard from "./components/SupplyDensityCard";
 import LocalidadChart from "./components/LocalidadChart";
 import FeatureLoadTimeCard from "./components/FeatureLoadTimeCard";
-import { LayoutDashboard, Calendar, RefreshCw } from "lucide-react";
+import FilterUsageCard from "./components/FilterUsageCard";
+import { LayoutDashboard, RefreshCw } from "lucide-react";
 
 export default function App() {
   const [lastUpdated] = useState("Apr 10, 2026 · 5:45 AM");
@@ -97,16 +98,20 @@ export default function App() {
           <div className="card-animate" style={{ animationDelay: "160ms" }}>
             <SessionCard />
           </div>
-          <div className="card-animate" style={{ animationDelay: "240ms" }}>
+          {/* <div className="card-animate" style={{ animationDelay: "240ms" }}>
             <FeatureUsageCard />
-          </div>
-          
-          <div className="card-animate" style={{ animationDelay: "320ms" }}>
+          </div> */}
+
+          <div className="card-animate" style={{ animationDelay: "240ms" }}>
             <SupplyDensityCard />
           </div>
 
-          <div className="card-animate" style={{ animationDelay: "400ms" }}>
+          <div className="card-animate" style={{ animationDelay: "320ms" }}>
             <LocalidadChart />
+          </div>
+
+          <div className="card-animate" style={{ animationDelay: "400ms" }}>
+            <FilterUsageCard />
           </div>
 
           <div className="card-animate" style={{ animationDelay: "480ms" }}>

@@ -26,6 +26,24 @@ Invoke-RestMethod -Method Post `
 	-Body $body
 ```
 
+Track filter usage (generic category/value pairs):
+
+```powershell
+$filterBody = @{
+	sessionId = 's_demo_1'
+	filters = @(
+		@{ category = 'budget'; value = '600k_900k' },
+		@{ category = 'amenities'; value = 'wifi' },
+		@{ category = 'location'; value = 'chapinero'; metadata = @{ uiSource = 'drawer' } }
+	)
+} | ConvertTo-Json -Depth 6
+
+Invoke-RestMethod -Method Post `
+	-Uri 'http://localhost:3000/api/analytics/search-filter-usages' `
+	-ContentType 'application/json' `
+	-Body $filterBody
+```
+
 Get top zones:
 
 ```powershell

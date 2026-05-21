@@ -26,6 +26,23 @@ const roommateRepository = {
     });
   },
 
+  async getCandidateProfiles(excludeUserId) {
+    return prisma.roommateProfile.findMany({
+      where: {
+        isActive: true,
+        userId: { not: excludeUserId },
+        user: {
+          swipesReceived: {
+            none: {
+              swiperId: excludeUserId,
+            },
+          },
+        },
+      },
+      include: { user: { select: { id: true, firstName: true, lastName: true, profilePictureUrl: true } } },
+    });
+  },
+
   async getActiveTenantNotificationCandidates(excludeUserId) {
     return prisma.roommateProfile.findMany({
       where: {

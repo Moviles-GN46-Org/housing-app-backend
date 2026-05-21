@@ -6,13 +6,12 @@ const analyticsController = {
     try {
       let eventData = req.body;
 
-
       if (eventData.payload && eventData.payload.lat && eventData.payload.lng) {
         const localidad = geoService.getLocalidadByCoords(
-          eventData.payload.lat, 
-          eventData.payload.lng
+          eventData.payload.lat,
+          eventData.payload.lng,
         );
-        eventData.payload.localidad = localidad; 
+        eventData.payload.localidad = localidad;
       }
 
       const event = await analyticsService.logEvent(req.user.userId, eventData);
@@ -24,11 +23,11 @@ const analyticsController = {
 
   async logBatch(req, res, next) {
     try {
-      const enrichedEvents = req.body.events.map(event => {
+      const enrichedEvents = req.body.events.map((event) => {
         if (event.payload && event.payload.lat && event.payload.lng) {
           event.payload.localidad = geoService.getLocalidadByCoords(
-            event.payload.lat, 
-            event.payload.lng
+            event.payload.lat,
+            event.payload.lng,
           );
         }
         return event;
@@ -48,7 +47,9 @@ const analyticsController = {
 
   async getPreferredMaxDistanceSummary(req, res, next) {
     try {
-      const data = await analyticsService.getPreferredMaxDistanceSummary(req.query);
+      const data = await analyticsService.getPreferredMaxDistanceSummary(
+        req.query,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -58,7 +59,10 @@ const analyticsController = {
   async getMyPreferredMaxDistance(req, res, next) {
     try {
       const userId = req.user?.userId;
-      const data = await analyticsService.getMyPreferredMaxDistance(userId, req.query);
+      const data = await analyticsService.getMyPreferredMaxDistance(
+        userId,
+        req.query,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -69,6 +73,19 @@ const analyticsController = {
     try {
       const actorUserId = req.user?.userId || null;
       const result = await analyticsService.trackSearchEvent(
+        actorUserId,
+        req.body,
+      );
+      res.status(201).json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async trackSearchFilterUsage(req, res, next) {
+    try {
+      const actorUserId = req.user?.userId || null;
+      const result = await analyticsService.trackSearchFilterUsage(
         actorUserId,
         req.body,
       );
@@ -134,17 +151,28 @@ const analyticsController = {
 
   async getPopularApartmentSizeNearUniversity(req, res, next) {
     try {
-      const data = await analyticsService.getPopularApartmentSizeNearUniversity(req.user.userId, req.query);
+      const data = await analyticsService.getPopularApartmentSizeNearUniversity(
+        req.user.userId,
+        req.query,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
     }
   },
 
-
   async getLocalidadStats(req, res, next) {
     try {
       const data = await analyticsService.getLocalidadStats();
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async getTopFilters(req, res, next) {
+    try {
+      const data = await analyticsService.getTopFilters(req.query);
       res.json({ success: true, data });
     } catch (err) {
       next(err);

@@ -11,11 +11,20 @@ const {
 } = require("../utils/searchAnalytics");
 
 const VALID_EVENT_TYPES = [
-  'SESSION_START', 'SESSION_END', 'SEARCH', 'PROPERTY_VIEW',
-  'FILTER_APPLIED', 'FEATURE_CLICK', 'MAP_INTERACTION',
-  'CHAT_STARTED', 'REVIEW_SUBMITTED', 'VISIT_SCHEDULED', 'CRASH', 'SUPPLY_DENSITY_CHECK',
-  'LOCATION_STATS_UPDATE',
-  'FEATURE_LOAD_TIME',
+  "SESSION_START",
+  "SESSION_END",
+  "SEARCH",
+  "PROPERTY_VIEW",
+  "FILTER_APPLIED",
+  "FEATURE_CLICK",
+  "MAP_INTERACTION",
+  "CHAT_STARTED",
+  "REVIEW_SUBMITTED",
+  "VISIT_SCHEDULED",
+  "CRASH",
+  "SUPPLY_DENSITY_CHECK",
+  "LOCATION_STATS_UPDATE",
+  "FEATURE_LOAD_TIME",
 ];
 
 const MAX_FEATURE_LOAD_DURATION_MS = 120000;
@@ -31,6 +40,9 @@ const MAX_NEIGHBORHOOD_LENGTH = 120;
 const MAX_RADIUS_KM = 500;
 const DEFAULT_APARTMENT_BUCKET_SIZE = 5;
 const DEFAULT_POPULAR_SIZES_LIMIT = 3;
+const MAX_FILTER_CATEGORY_LENGTH = 120;
+const MAX_FILTER_VALUE_LENGTH = 120;
+const MAX_FILTER_USAGE_ITEMS = 100;
 
 function toNumberOrNull(value, fieldName) {
   if (value === undefined || value === null || value === "") {
@@ -118,10 +130,89 @@ function validateSearchSignal({
   }
 }
 
+function normalizeFilterUsageItems(payload) {
+  const { filter, filters } = payload || {};
+
+  if (
+    filter !== undefined &&
+    (typeof filter !== "object" || Array.isArray(filter))
+  ) {
+    throw new ValidationError(
+      "filter must be an object with category and value",
+    );
+  }
+
+  let rawItems;
+  if (Array.isArray(filters)) {
+    rawItems = filters;
+  } else if (filter) {
+    rawItems = [filter];
+  } else {
+    throw new ValidationError("Provide filter or filters");
+  }
+
+  if (rawItems.length === 0) {
+    throw new ValidationError("filters must include at least one item");
+  }
+
+  if (rawItems.length > MAX_FILTER_USAGE_ITEMS) {
+    throw new ValidationError(
+      `filters supports up to ${MAX_FILTER_USAGE_ITEMS} items per request`,
+    );
+  }
+
+  return rawItems.map((item, idx) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      throw new ValidationError(`filters[${idx}] must be an object`);
+    }
+
+    const category = String(item.category || "").trim();
+    const value = String(item.value || "").trim();
+
+    if (!category || !value) {
+      throw new ValidationError(
+        `filters[${idx}] requires non-empty category and value`,
+      );
+    }
+
+    if (category.length > MAX_FILTER_CATEGORY_LENGTH) {
+      throw new ValidationError(
+        `filters[${idx}].category max length is ${MAX_FILTER_CATEGORY_LENGTH}`,
+      );
+    }
+
+    if (value.length > MAX_FILTER_VALUE_LENGTH) {
+      throw new ValidationError(
+        `filters[${idx}].value max length is ${MAX_FILTER_VALUE_LENGTH}`,
+      );
+    }
+
+    const metadata = item.metadata;
+    if (
+      metadata !== undefined &&
+      (metadata === null ||
+        typeof metadata !== "object" ||
+        Array.isArray(metadata))
+    ) {
+      throw new ValidationError(
+        `filters[${idx}].metadata must be a JSON object`,
+      );
+    }
+
+    return {
+      filterCategory: category,
+      filterValue: value,
+      metadata: metadata || null,
+    };
+  });
+}
+
 function parseDateRange(queryParams) {
   const { from, to } = queryParams || {};
   if (!from || !to) {
-    throw new ValidationError("from and to are required query params (ISO date)");
+    throw new ValidationError(
+      "from and to are required query params (ISO date)",
+    );
   }
   const fromDate = new Date(from);
   const toDate = new Date(to);
@@ -145,7 +236,9 @@ function percentile(sortedValues, p) {
   const upper = Math.ceil(idx);
   if (lower === upper) return sortedValues[lower];
   const weight = idx - lower;
-  return sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * weight;
+  return (
+    sortedValues[lower] + (sortedValues[upper] - sortedValues[lower]) * weight
+  );
 }
 
 function buildDistanceSummary(rows, isPersonal) {
@@ -157,18 +250,19 @@ function buildDistanceSummary(rows, isPersonal) {
       samples: 0,
       lastUpdatedAt: null,
       message: isPersonal
-      ? "Aun no tenemos suficientes busquedas tuyas para recomendar una distancia."
-      : "Aun no hay suficientes busquedas para calcular la recomendacion global.",
+        ? "Aun no tenemos suficientes busquedas tuyas para recomendar una distancia."
+        : "Aun no hay suficientes busquedas para calcular la recomendacion global.",
     };
   }
   const values = rows
-  .map((r) => Number(r.radiusKm))
-  .filter((v) => Number.isFinite(v))
-  .sort((a, b) => a - b);
+    .map((r) => Number(r.radiusKm))
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
   const preferred = percentile(values, 0.5);
   const recommended = percentile(values, 0.75);
   const maxObserved = values[values.length - 1];
-  const lastUpdatedAt = rows[rows.length - 1]?.searchedAt?.toISOString?.() || null;
+  const lastUpdatedAt =
+    rows[rows.length - 1]?.searchedAt?.toISOString?.() || null;
   return {
     preferredKm: round2(preferred),
     recommendedMaxKm: round2(recommended),
@@ -176,8 +270,12 @@ function buildDistanceSummary(rows, isPersonal) {
     samples: values.length,
     lastUpdatedAt,
     message: isPersonal
-    ? "Segun tus busquedas recientes, prefieres viviendas hasta " + round2(preferred) + " km."
-    : "La mayoria de usuarios prefiere viviendas hasta " + round2(preferred) + " km de su punto de busqueda.",
+      ? "Segun tus busquedas recientes, prefieres viviendas hasta " +
+        round2(preferred) +
+        " km."
+      : "La mayoria de usuarios prefiere viviendas hasta " +
+        round2(preferred) +
+        " km de su punto de busqueda.",
   };
 }
 
@@ -349,6 +447,43 @@ const analyticsService = {
     return { id: created.id, deduped: false };
   },
 
+  async trackSearchFilterUsage(actorUserId, payload) {
+    const { userId, sessionId, appliedAt } = payload || {};
+
+    if (!sessionId) {
+      throw new ValidationError("sessionId is required");
+    }
+
+    if (String(sessionId).length > MAX_SESSION_ID_LENGTH) {
+      throw new ValidationError(
+        `sessionId max length is ${MAX_SESSION_ID_LENGTH}`,
+      );
+    }
+
+    const eventDate = appliedAt ? new Date(appliedAt) : new Date();
+    if (Number.isNaN(eventDate.getTime())) {
+      throw new ValidationError("appliedAt must be a valid ISO date");
+    }
+
+    const items = normalizeFilterUsageItems(payload);
+    const effectiveUserId = userId || actorUserId || null;
+
+    const entries = items.map((item) => ({
+      userId: effectiveUserId,
+      sessionId,
+      filterCategory: item.filterCategory,
+      filterValue: item.filterValue,
+      metadata: item.metadata,
+      appliedAt: eventDate,
+    }));
+
+    const result = await analyticsRepository.createSearchFilterUsages(entries);
+
+    return {
+      stored: result.count,
+    };
+  },
+
   async getTopSearchedZones(queryParams) {
     const { from, to, city, limit } = queryParams || {};
     if (!from || !to) {
@@ -492,7 +627,7 @@ const analyticsService = {
     });
     return buildDistanceSummary(rows, false);
   },
-  
+
   async getMyPreferredMaxDistance(userId, queryParams) {
     if (!userId) {
       throw new ValidationError("Authenticated user is required");
@@ -518,23 +653,30 @@ const analyticsService = {
     const onlyPopularSize = toBooleanFlag(options.onlyPopularSize);
 
     const profile = await roommateRepository.getProfile(userId);
-    const university = await universityRepository.resolveByName(profile?.university);
+    const university = await universityRepository.resolveByName(
+      profile?.university,
+    );
 
     if (!university) {
       throw new ValidationError("No university configuration available");
     }
 
-    const radiusKm = toNumberOrNull(university.defaultRadiusKm, "defaultRadiusKm") || 2;
-    const popularSizes = await analyticsRepository.getPopularApartmentSizesNearLocation({
-      latitude: university.latitude,
-      longitude: university.longitude,
-      radiusKm,
-      limit: DEFAULT_POPULAR_SIZES_LIMIT,
-      bucketSize: DEFAULT_APARTMENT_BUCKET_SIZE,
-    });
+    const radiusKm =
+      toNumberOrNull(university.defaultRadiusKm, "defaultRadiusKm") || 2;
+    const popularSizes =
+      await analyticsRepository.getPopularApartmentSizesNearLocation({
+        latitude: university.latitude,
+        longitude: university.longitude,
+        radiusKm,
+        limit: DEFAULT_POPULAR_SIZES_LIMIT,
+        bucketSize: DEFAULT_APARTMENT_BUCKET_SIZE,
+      });
 
     const topSizes = popularSizes.map((row) => ({
-      sizeRange: formatSizeBucket(Number(row.bucketMinM2), Number(row.bucketMaxM2)),
+      sizeRange: formatSizeBucket(
+        Number(row.bucketMinM2),
+        Number(row.bucketMaxM2),
+      ),
       bucketMinM2: Number(row.bucketMinM2),
       bucketMaxM2: Number(row.bucketMaxM2),
       count: Number(row.count),
@@ -564,7 +706,70 @@ const analyticsService = {
   async getLocalidadStats() {
     return analyticsRepository.getLocalidadStats();
   },
-  
+
+  async getTopFilters(queryParams) {
+    const { from, to } = queryParams || {};
+    let fromDate = null;
+    let toDate = null;
+
+    if (from) {
+      fromDate = new Date(from);
+      if (Number.isNaN(fromDate.getTime())) {
+        throw new ValidationError("from must be a valid ISO date");
+      }
+    }
+    if (to) {
+      toDate = new Date(to);
+      if (Number.isNaN(toDate.getTime())) {
+        throw new ValidationError("to must be a valid ISO date");
+      }
+    }
+    if (fromDate && toDate && toDate <= fromDate) {
+      throw new ValidationError("to must be greater than from");
+    }
+
+    const rows = await analyticsRepository.getTopFilters({
+      from: fromDate,
+      to: toDate,
+    });
+
+    const categoryMap = new Map();
+    let totalUsages = 0;
+
+    for (const row of rows) {
+      const count = Number(row.count);
+      totalUsages += count;
+      if (!categoryMap.has(row.filterCategory)) {
+        categoryMap.set(row.filterCategory, {
+          category: row.filterCategory,
+          total: 0,
+          values: [],
+        });
+      }
+      const cat = categoryMap.get(row.filterCategory);
+      cat.total += count;
+      cat.values.push({ value: row.filterValue, count });
+    }
+
+    const byCategory = Array.from(categoryMap.values())
+      .sort((a, b) => b.total - a.total)
+      .map((cat) => ({
+        ...cat,
+        pct:
+          totalUsages > 0
+            ? Number(((cat.total / totalUsages) * 100).toFixed(1))
+            : 0,
+        values: cat.values.map((v) => ({
+          ...v,
+          pct:
+            cat.total > 0
+              ? Number(((v.count / cat.total) * 100).toFixed(1))
+              : 0,
+        })),
+      }));
+
+    return { byCategory, totalUsages };
+  },
 };
 
 module.exports = analyticsService;

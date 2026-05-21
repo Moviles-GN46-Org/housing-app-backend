@@ -19,21 +19,24 @@ model User {
   isActive             Boolean               @default(true)
   createdAt            DateTime              @default(now())
   updatedAt            DateTime              @updatedAt
-  analyticsEvents      AnalyticsEvent[]
-  chatParticipations   ChatParticipant[]
-  Favorite             Favorite[]
   landlordVerification LandlordVerification?
-  sentMessages         Message[]             @relation("MessageSender")
-  notifications        Notification[]
-  properties           Property[]
-  reportsReceived      Report[]              @relation("ReportedUser")
-  reports              Report[]              @relation("ReportAuthor")
-  reviewsWritten       Review[]              @relation("ReviewAuthor")
-  reviewsReceived      Review[]              @relation("ReviewedLandlord")
-  roommateProfile      RoommateProfile?
-  swipesReceived       RoommateSwipe[]       @relation("Swiped")
-  swipesMade           RoommateSwipe[]       @relation("Swiper")
-  searchEvents         SearchEvent[]
+
+  // Relations
+  properties         Property[]         // Landlord's listings
+  reviewsWritten     Review[]           @relation("ReviewAuthor")
+  reviewsReceived    Review[]           @relation("ReviewedLandlord")
+  sentMessages       Message[]          @relation("MessageSender")
+  chatParticipations ChatParticipant[]
+  reports            Report[]           @relation("ReportAuthor")
+  reportsReceived    Report[]           @relation("ReportedUser")
+  roommateProfile    RoommateProfile?
+  swipesMade         RoommateSwipe[]    @relation("Swiper")
+  swipesReceived     RoommateSwipe[]    @relation("Swiped")
+  analyticsEvents    AnalyticsEvent[]
+  searchEvents       SearchEvent[]
+  searchFilterUsages SearchFilterUsage[]
+  notifications      Notification[]
+  favorites          Favorite[]
   studentVerification  StudentVerification?
 
   @@index([role])
@@ -113,9 +116,9 @@ model Property {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   chats             Chat[]
-  Favorite          Favorite[]
   landlord          User           @relation(fields: [landlordId], references: [id], onDelete: Cascade)
   reports           Report[]
+  favorites         Favorite[]
   reviews           Review[]
 
   @@index([status])
@@ -328,18 +331,22 @@ model SearchEvent {
   @@index([filtersHash])
 }
 
-model Favorite {
-  id         String   @id
-  userId     String
-  propertyId String
-  createdAt  DateTime @default(now())
-  Property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  User       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model SearchFilterUsage {
+  id             String   @id @default(uuid())
+  userId         String?
+  sessionId      String
+  filterCategory String
+  filterValue    String
+  metadata       Json?
+  appliedAt      DateTime @default(now())
+  createdAt      DateTime @default(now())
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@unique([userId, propertyId])
-  @@index([createdAt])
-  @@index([propertyId])
-  @@index([userId])
+  @@index([appliedAt])
+  @@index([filterCategory])
+  @@index([filterCategory, filterValue])
+  @@index([sessionId, appliedAt])
+  @@index([userId, appliedAt])
 }
 
 enum UserRole {
@@ -437,6 +444,29 @@ enum SwipeDirection {
   LEFT
 }
 
+// ============================================================
+// 9. FAVORITES SYSTEM (User's saved properties)
+// ============================================================
+
+model Favorite {
+  id          String   @id @default(uuid())
+  userId      String
+  propertyId  String
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, propertyId]) // One favorite per user per property
+  @@index([userId])
+  @@index([propertyId])
+  @@index([createdAt])
+}
+
+// ============================================================
+// 10. NOTIFICATIONS
+// ============================================================
+
 enum NotificationType {
   NEW_MESSAGE
   VISIT_REMINDER
@@ -450,6 +480,25 @@ enum NotificationType {
   VERIFICATION_REJECTED
   PROPERTY_MATCH
 }
+
+// ============================================================
+// 11. ANALYTICS EVENTS (Generic event store)
+// ============================================================
+// Single table approach - flexible JSON payload per event type
+//
+// Event types and their expected payloads:
+//
+// SESSION_START:    { device, os, appVersion }
+// SESSION_END:      { durationSeconds }
+// SEARCH:           { filters: { petFriendly, maxPrice, ... }, resultsCount }
+// PROPERTY_VIEW:    { propertyId, source: "map"|"list"|"search" }
+// FILTER_APPLIED:   { filterName, filterValue }
+// FEATURE_CLICK:    { feature: "roommate_finder"|"chat"|"reviews"|... }
+// MAP_INTERACTION:  { action: "zoom"|"pan"|"search_area", location }
+// CHAT_STARTED:     { propertyId, landlordId }
+// REVIEW_SUBMITTED: { propertyId, rating }
+// VISIT_SCHEDULED:  { propertyId, chatId }
+// CRASH:            { screen, errorMessage, stackTrace }
 
 enum AnalyticsEventType {
   SESSION_START

@@ -21,3 +21,13 @@ body {
 .card-animate {
   animation: fadeInUp 0.5s ease both;
 }
+
+@layer utilities {
+  .card-fill-y {
+    @apply h-full min-h-0;
+  }
+
+  .card-fill-y > * {
+    @apply h-full;
+  }
+}
