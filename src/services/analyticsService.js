@@ -715,7 +715,7 @@ const analyticsService = {
     const cached = responseTimeCache.get(landlordId);
     if (cached && Date.now() - cached.ts < 15 * 60 * 1000) return cached.data;
 
-    const MIN_SAMPLES = 5;
+    const MIN_SAMPLES = 1;
     const rows = await analyticsRepository.getLandlordResponseTime(landlordId);
     const deltas = rows
       .map((r) => Number(r.deltaMinutes))
