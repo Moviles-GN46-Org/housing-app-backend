@@ -274,13 +274,51 @@ const analyticsRepository = {
 
   async getLocalidadStats() {
     return prisma.$queryRaw`
-      SELECT 
-        COALESCE(payload->>'localidad', 'Desconocida') AS "localidad", 
+      SELECT
+        COALESCE(payload->>'localidad', 'Desconocida') AS "localidad",
         COUNT(*)::int AS "conteo"
       FROM "AnalyticsEvent"
       WHERE "eventType"::text = 'LOCATION_STATS_UPDATE'
       GROUP BY payload->>'localidad'
       ORDER BY "conteo" DESC
+    `;
+  },
+
+  async getLandlordResponseTime(landlordId, windowDays = 90) {
+    return prisma.$queryRaw`
+      WITH landlord_chats AS (
+        SELECT c."id" AS "chatId"
+        FROM "Chat" c
+        JOIN "ChatParticipant" cp ON cp."chatId" = c."id"
+        WHERE cp."userId" = ${landlordId}
+          AND c."createdAt" >= NOW() - (${windowDays}::int * INTERVAL '1 day')
+        ORDER BY c."updatedAt" DESC
+        LIMIT 30
+      ),
+      first_student_msg AS (
+        SELECT DISTINCT ON (m."chatId")
+          m."chatId", m."createdAt" AS "studentMsgAt"
+        FROM "Message" m
+        JOIN "User" u ON u."id" = m."senderId"
+        WHERE m."chatId" IN (SELECT "chatId" FROM landlord_chats)
+          AND u."role" = 'STUDENT'
+        ORDER BY m."chatId", m."createdAt" ASC
+      ),
+      first_landlord_response AS (
+        SELECT DISTINCT ON (m."chatId")
+          m."chatId", m."createdAt" AS "landlordRespAt"
+        FROM "Message" m
+        WHERE m."chatId" IN (SELECT "chatId" FROM first_student_msg)
+          AND m."senderId" = ${landlordId}
+          AND m."createdAt" > (
+            SELECT fsm."studentMsgAt" FROM first_student_msg fsm WHERE fsm."chatId" = m."chatId"
+          )
+        ORDER BY m."chatId", m."createdAt" ASC
+      )
+      SELECT
+        EXTRACT(EPOCH FROM (lr."landlordRespAt" - fsm."studentMsgAt"))::float / 60 AS "deltaMinutes"
+      FROM first_landlord_response lr
+      JOIN first_student_msg fsm ON fsm."chatId" = lr."chatId"
     `;
   },
 };

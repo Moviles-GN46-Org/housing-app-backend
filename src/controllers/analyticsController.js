@@ -178,6 +178,15 @@ const analyticsController = {
       next(err);
     }
   },
+
+  async getLandlordResponseTime(req, res, next) {
+    try {
+      const data = await analyticsService.getLandlordResponseTime(req.params.id);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = analyticsController;

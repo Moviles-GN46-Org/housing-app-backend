@@ -55,4 +55,6 @@ router.get(
 
 router.get("/top-filters", analyticsController.getTopFilters);
 
+router.get('/landlord/:id/response-time', auth, analyticsController.getLandlordResponseTime);
+
 module.exports = router;

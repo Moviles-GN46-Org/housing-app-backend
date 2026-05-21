@@ -279,6 +279,8 @@ function buildDistanceSummary(rows, isPersonal) {
   };
 }
 
+const responseTimeCache = new Map();
+
 const analyticsService = {
   async logEvent(userId, { sessionId, eventType, payload, screenName }) {
     if (!sessionId || !eventType || !payload) {
@@ -705,6 +707,37 @@ const analyticsService = {
 
   async getLocalidadStats() {
     return analyticsRepository.getLocalidadStats();
+  },
+
+  async getLandlordResponseTime(landlordId) {
+    if (!landlordId) throw new ValidationError('landlordId is required');
+
+    const cached = responseTimeCache.get(landlordId);
+    if (cached && Date.now() - cached.ts < 15 * 60 * 1000) return cached.data;
+
+    const MIN_SAMPLES = 5;
+    const rows = await analyticsRepository.getLandlordResponseTime(landlordId);
+    const deltas = rows
+      .map((r) => Number(r.deltaMinutes))
+      .filter((v) => Number.isFinite(v) && v >= 0);
+
+    if (deltas.length < MIN_SAMPLES) {
+      const result = { medianMinutes: null, sampleSize: deltas.length, bucket: 'insufficient' };
+      responseTimeCache.set(landlordId, { ts: Date.now(), data: result });
+      return result;
+    }
+
+    deltas.sort((a, b) => a - b);
+    const median = percentile(deltas, 0.5);
+
+    const bucket =
+      median < 60   ? '<1h'   :
+      median < 360  ? 'hours' :
+      median < 1440 ? 'day'   : '>day';
+
+    const result = { medianMinutes: Math.round(median), sampleSize: deltas.length, bucket };
+    responseTimeCache.set(landlordId, { ts: Date.now(), data: result });
+    return result;
   },
 
   async getTopFilters(queryParams) {
