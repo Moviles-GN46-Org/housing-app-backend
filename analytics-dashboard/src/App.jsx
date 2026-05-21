@@ -5,6 +5,7 @@ import FeatureUsageCard from "./components/FeatureUsageCard";
 import ZonesCard from "./components/ZonesCard";
 import SupplyDensityCard from "./components/SupplyDensityCard";
 import LocalidadChart from "./components/LocalidadChart";
+import FeatureLoadTimeCard from "./components/FeatureLoadTimeCard";
 import FilterUsageCard from "./components/FilterUsageCard";
 import { LayoutDashboard, RefreshCw } from "lucide-react";
 
@@ -111,6 +112,10 @@ export default function App() {
 
           <div className="card-animate" style={{ animationDelay: "400ms" }}>
             <FilterUsageCard />
+          </div>
+
+          <div className="card-animate" style={{ animationDelay: "480ms" }}>
+            <FeatureLoadTimeCard />
           </div>
         </div>
       </main>

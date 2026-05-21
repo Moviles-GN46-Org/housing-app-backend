@@ -7,7 +7,7 @@ function generateAccessToken(user) {
   return jwt.sign(
     { userId: user.id, role: user.role, isVerified: user.isVerified },
     ACCESS_SECRET,
-    { expiresIn: "2h" },
+    { expiresIn: "1m" },
   );
 }
 
