@@ -27,11 +27,11 @@ const reviewService = {
     const property = await propertyRepository.findById(propertyId);
     if (!property) throw new NotFoundError('Property not found');
 
-    // Eligibility check 3: student has a chat for this property
-    const existingChat = await chatRepository.findByPropertyAndStudent(propertyId, authorId);
-    if (!existingChat) {
-      throw new ForbiddenError('You must have contacted this landlord about this property before reviewing it');
-    }
+    // TODO: re-enable before prod — students should only review properties they've contacted the landlord about
+    // const existingChat = await chatRepository.findByPropertyAndStudent(propertyId, authorId);
+    // if (!existingChat) {
+    //   throw new ForbiddenError('You must have contacted this landlord about this property before reviewing it');
+    // }
 
     // Eligibility check 4: no prior review (unique constraint enforced at DB level too)
     const existing = await reviewRepository.findByAuthorAndProperty(authorId, propertyId);
