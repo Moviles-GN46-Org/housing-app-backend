@@ -179,6 +179,17 @@ const analyticsController = {
     }
   },
 
+  async getRoommateProfileCharacteristics(req, res, next) {
+    try {
+      const data = await analyticsService.getRoommateProfileCharacteristics(
+        req.query,
+      );
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async getLandlordResponseTime(req, res, next) {
     try {
       const data = await analyticsService.getLandlordResponseTime(req.params.id);

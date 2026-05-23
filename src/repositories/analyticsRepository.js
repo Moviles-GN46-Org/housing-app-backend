@@ -321,6 +321,125 @@ const analyticsRepository = {
       JOIN first_student_msg fsm ON fsm."chatId" = lr."chatId"
     `;
   },
+
+  async getActiveRoommateProfilesCount() {
+    return prisma.roommateProfile.count({
+      where: { isActive: true },
+    });
+  },
+
+  async getActiveNoisePreferenceDistribution() {
+    return prisma.roommateProfile.groupBy({
+      by: ["noisePreference"],
+      where: { isActive: true },
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+    });
+  },
+
+  async getActiveHabitsSummary() {
+    const rows = await prisma.$queryRaw`
+      SELECT
+        SUM(CASE WHEN "smokes" = true THEN 1 ELSE 0 END)::int AS "smokesYes",
+        SUM(CASE WHEN "smokes" = false THEN 1 ELSE 0 END)::int AS "smokesNo",
+        SUM(CASE WHEN "hasPets" = true THEN 1 ELSE 0 END)::int AS "hasPetsYes",
+        SUM(CASE WHEN "hasPets" = false THEN 1 ELSE 0 END)::int AS "hasPetsNo"
+      FROM "RoommateProfile"
+      WHERE "isActive" = true
+    `;
+
+    return rows[0] || {
+      smokesYes: 0,
+      smokesNo: 0,
+      hasPetsYes: 0,
+      hasPetsNo: 0,
+    };
+  },
+
+  async getActiveBudgetRangeDistribution() {
+    return prisma.$queryRaw`
+      WITH base AS (
+        SELECT
+          (
+            COALESCE("budgetMin", 0)::numeric
+            + COALESCE("budgetMax", "budgetMin")::numeric
+          ) / 2 AS midpoint
+        FROM "RoommateProfile"
+        WHERE "isActive" = true
+      ),
+      bucketed AS (
+        SELECT
+          CASE
+            WHEN midpoint < 500000 THEN '0-500k'
+            WHEN midpoint < 1000000 THEN '500k-1M'
+            WHEN midpoint < 1500000 THEN '1M-1.5M'
+            ELSE '1.5M+'
+          END AS bucket
+        FROM base
+      )
+      SELECT
+        bucket AS "name",
+        COUNT(*)::int AS "count"
+      FROM bucketed
+      GROUP BY bucket
+      ORDER BY
+        CASE bucket
+          WHEN '0-500k' THEN 1
+          WHEN '500k-1M' THEN 2
+          WHEN '1M-1.5M' THEN 3
+          WHEN '1.5M+' THEN 4
+          ELSE 5
+        END
+    `;
+  },
+
+  async getActivePreferredAreaDistribution() {
+    return prisma.$queryRaw`
+      WITH normalized AS (
+        SELECT COALESCE(NULLIF(BTRIM("preferredArea"), ''), 'Not specified') AS value
+        FROM "RoommateProfile"
+        WHERE "isActive" = true
+      )
+      SELECT
+        value AS "name",
+        COUNT(*)::int AS "count"
+      FROM normalized
+      GROUP BY value
+      ORDER BY "count" DESC, "name" ASC
+    `;
+  },
+
+  async getActiveJobDistribution() {
+    return prisma.$queryRaw`
+      WITH normalized AS (
+        SELECT COALESCE(NULLIF(BTRIM("job"), ''), 'Not specified') AS value
+        FROM "RoommateProfile"
+        WHERE "isActive" = true
+      )
+      SELECT
+        value AS "name",
+        COUNT(*)::int AS "count"
+      FROM normalized
+      GROUP BY value
+      ORDER BY "count" DESC, "name" ASC
+    `;
+  },
+
+  async getActiveUniversityDistribution() {
+    return prisma.$queryRaw`
+      WITH normalized AS (
+        SELECT COALESCE(NULLIF(BTRIM("university"), ''), 'Not specified') AS value
+        FROM "RoommateProfile"
+        WHERE "isActive" = true
+      )
+      SELECT
+        value AS "name",
+        COUNT(*)::int AS "count"
+      FROM normalized
+      GROUP BY value
+      ORDER BY "count" DESC, "name" ASC
+    `;
+  },
 };
 
 module.exports = analyticsRepository;

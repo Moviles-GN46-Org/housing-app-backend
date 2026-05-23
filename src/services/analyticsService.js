@@ -43,6 +43,7 @@ const DEFAULT_POPULAR_SIZES_LIMIT = 3;
 const MAX_FILTER_CATEGORY_LENGTH = 120;
 const MAX_FILTER_VALUE_LENGTH = 120;
 const MAX_FILTER_USAGE_ITEMS = 100;
+const DEFAULT_TEXT_TOP_LIMIT = 5;
 
 function toNumberOrNull(value, fieldName) {
   if (value === undefined || value === null || value === "") {
@@ -276,6 +277,41 @@ function buildDistanceSummary(rows, isPersonal) {
       : "La mayoria de usuarios prefiere viviendas hasta " +
         round2(preferred) +
         " km de su punto de busqueda.",
+  };
+}
+
+function toPercent(count, total) {
+  if (!total) return 0;
+  return Number(((count / total) * 100).toFixed(1));
+}
+
+function normalizeTextMetricItems(rows, totalProfiles, topLimit) {
+  const normalizedRows = (rows || []).map((row) => ({
+    name: String(row.name || "Not specified"),
+    count: Number(row.count || 0),
+  }));
+
+  const topItems = normalizedRows.slice(0, topLimit).map((row) => ({
+    ...row,
+    pct: toPercent(row.count, totalProfiles),
+  }));
+
+  const remainingCount = normalizedRows
+    .slice(topLimit)
+    .reduce((sum, row) => sum + row.count, 0);
+
+  const others =
+    remainingCount > 0
+      ? {
+          name: "Others",
+          count: remainingCount,
+          pct: toPercent(remainingCount, totalProfiles),
+        }
+      : null;
+
+  return {
+    items: others ? [...topItems, others] : topItems,
+    totalCategories: normalizedRows.length,
   };
 }
 
@@ -802,6 +838,109 @@ const analyticsService = {
       }));
 
     return { byCategory, totalUsages };
+  },
+
+  async getRoommateProfileCharacteristics(queryParams = {}) {
+    const { top } = queryParams;
+    let parsedTop = DEFAULT_TEXT_TOP_LIMIT;
+
+    if (top !== undefined && top !== null && top !== "") {
+      parsedTop = parseInt(top, 10);
+      if (Number.isNaN(parsedTop) || parsedTop < 1 || parsedTop > 15) {
+        throw new ValidationError("top must be an integer between 1 and 15");
+      }
+    }
+
+    const [
+      totalProfiles,
+      noisePreferenceRows,
+      habitsSummary,
+      budgetRangeRows,
+      preferredAreaRows,
+      jobRows,
+      universityRows,
+    ] = await Promise.all([
+      analyticsRepository.getActiveRoommateProfilesCount(),
+      analyticsRepository.getActiveNoisePreferenceDistribution(),
+      analyticsRepository.getActiveHabitsSummary(),
+      analyticsRepository.getActiveBudgetRangeDistribution(),
+      analyticsRepository.getActivePreferredAreaDistribution(),
+      analyticsRepository.getActiveJobDistribution(),
+      analyticsRepository.getActiveUniversityDistribution(),
+    ]);
+
+    const total = Number(totalProfiles || 0);
+
+    const noisePreferenceMap = {
+      QUIET: "Quiet",
+      MODERATE: "Moderate",
+      LIVELY: "Lively",
+    };
+
+    const noisePreference = (noisePreferenceRows || []).map((row) => {
+      const count = Number(row._count?.id || 0);
+      return {
+        name: noisePreferenceMap[row.noisePreference] || row.noisePreference,
+        value: row.noisePreference,
+        count,
+        pct: toPercent(count, total),
+      };
+    });
+
+    const smokes = [
+      { name: "Smokes", count: Number(habitsSummary.smokesYes || 0) },
+      {
+        name: "Does not smoke",
+        count: Number(habitsSummary.smokesNo || 0),
+      },
+    ].map((row) => ({ ...row, pct: toPercent(row.count, total) }));
+
+    const hasPets = [
+      { name: "Has pets", count: Number(habitsSummary.hasPetsYes || 0) },
+      { name: "No pets", count: Number(habitsSummary.hasPetsNo || 0) },
+    ].map((row) => ({ ...row, pct: toPercent(row.count, total) }));
+
+    const budgetOrder = ["0-500k", "500k-1M", "1M-1.5M", "1.5M+"];
+    const budgetMap = new Map(
+      (budgetRangeRows || []).map((row) => [
+        row.name,
+        Number(row.count || 0),
+      ]),
+    );
+    const budgetRanges = budgetOrder.map((name) => {
+      const count = budgetMap.get(name) || 0;
+      return {
+        name,
+        count,
+        pct: toPercent(count, total),
+      };
+    });
+
+    const preferredArea = normalizeTextMetricItems(
+      preferredAreaRows,
+      total,
+      parsedTop,
+    );
+    const job = normalizeTextMetricItems(jobRows, total, parsedTop);
+    const university = normalizeTextMetricItems(
+      universityRows,
+      total,
+      parsedTop,
+    );
+
+    return {
+      totalProfiles: total,
+      generatedAt: new Date().toISOString(),
+      metrics: {
+        noisePreference,
+        smokes,
+        hasPets,
+        budgetRanges,
+        preferredArea,
+        job,
+        university,
+      },
+    };
   },
 };
 

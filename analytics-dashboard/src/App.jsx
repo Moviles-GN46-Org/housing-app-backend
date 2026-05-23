@@ -7,11 +7,12 @@ import SupplyDensityCard from "./components/SupplyDensityCard";
 import LocalidadChart from "./components/LocalidadChart";
 import FeatureLoadTimeCard from "./components/FeatureLoadTimeCard";
 import FilterUsageCard from "./components/FilterUsageCard";
+import RoommateProfileRealtimeCard from "./components/RoommateProfileRealtimeCard";
 import { LayoutDashboard, RefreshCw } from "lucide-react";
 
 export default function App() {
   const [lastUpdated] = useState("Apr 10, 2026 · 5:45 AM");
-  const [zonesRefreshToken, setZonesRefreshToken] = useState(0);
+  const [dashboardRefreshToken, setDashboardRefreshToken] = useState(0);
 
   return (
     <div className="min-h-screen bg-linen font-sans">
@@ -40,7 +41,7 @@ export default function App() {
               <span>{lastUpdated}</span>
             </div> */}
             <button
-              onClick={() => setZonesRefreshToken((v) => v + 1)}
+              onClick={() => setDashboardRefreshToken((v) => v + 1)}
               className="flex items-center gap-1.5 bg-bronze text-white text-xs font-medium px-3.5 py-1.5 rounded-full hover:bg-[#C8874A] transition-colors"
             >
               <RefreshCw size={12} />
@@ -93,7 +94,7 @@ export default function App() {
             <CrashRateCard />
           </div>
           <div className="card-animate" style={{ animationDelay: "80ms" }}>
-            <ZonesCard refreshToken={zonesRefreshToken} />
+            <ZonesCard refreshToken={dashboardRefreshToken} />
           </div>
           <div className="card-animate" style={{ animationDelay: "160ms" }}>
             <SessionCard />
@@ -116,6 +117,10 @@ export default function App() {
 
           <div className="card-animate" style={{ animationDelay: "480ms" }}>
             <FeatureLoadTimeCard />
+          </div>
+
+          <div className="card-animate lg:col-span-2" style={{ animationDelay: "560ms" }}>
+            <RoommateProfileRealtimeCard refreshToken={dashboardRefreshToken} />
           </div>
         </div>
       </main>

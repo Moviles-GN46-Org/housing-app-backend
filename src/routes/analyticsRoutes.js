@@ -41,6 +41,10 @@ router.get(
 router.get("/crash-stats", analyticsController.getCrashStats);
 router.get("/supply-density", analyticsController.getSupplyDensity);
 router.get("/feature-load-times", analyticsController.getFeatureLoadTimes);
+router.get(
+  "/roommate-profile-characteristics",
+  analyticsController.getRoommateProfileCharacteristics,
+);
 
 router.get(
   "/preferred-max-distance-summary",

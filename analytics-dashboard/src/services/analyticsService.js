@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3000/api";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:3000";
+const API_URL = `${API_BASE}/api`;
 
 const analyticsService = {
   getLocalidadStats: async () => {
@@ -33,6 +34,21 @@ const analyticsService = {
       return response.data;
     } catch (error) {
       console.error("Error in getTopFilters:", error);
+      throw error;
+    }
+  },
+
+  getRoommateProfileCharacteristics: async ({ top } = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (top) params.set("top", String(top));
+      const qs = params.toString() ? `?${params.toString()}` : "";
+      const response = await axios.get(
+        `${API_URL}/analytics/roommate-profile-characteristics${qs}`,
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in getRoommateProfileCharacteristics:", error);
       throw error;
     }
   },
