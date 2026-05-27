@@ -119,6 +119,11 @@ export default function App() {
             <FeatureLoadTimeCard />
           </div>
 
+          {/* ANTES: <LocalidadChart /> */}
+          <div className="card-animate" style={{ animationDelay: "320ms" }}>
+            <LocalidadChart refreshToken={dashboardRefreshToken} />
+          </div>
+
           <div className="card-animate lg:col-span-2" style={{ animationDelay: "560ms" }}>
             <RoommateProfileRealtimeCard refreshToken={dashboardRefreshToken} />
           </div>

@@ -12,7 +12,7 @@ import {
 import { MapPinned, Loader2, AlertCircle } from "lucide-react";
 import analyticsService from "../services/analyticsService";
 
-const LocalidadChart = () => {
+const LocalidadChart = ({ refreshToken }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -33,7 +33,8 @@ const LocalidadChart = () => {
       }
     };
     fetchStats();
-  }, []);
+    
+  }, [refreshToken]);
 
   if (loading)
     return (

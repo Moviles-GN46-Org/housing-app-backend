@@ -1,5 +1,6 @@
 const analyticsService = require("../services/analyticsService");
 const geoService = require("../services/geoService");
+const prisma = require("../prisma");
 
 const analyticsController = {
   async logEvent(req, res, next) {
@@ -198,6 +199,40 @@ const analyticsController = {
       next(err);
     }
   },
+
+  async logRoommateStatus(req, res) {
+    try {
+      // 1. Recibimos las coordenadas del celular
+      const { lat, lng } = req.body;
+      
+      if (!lat || !lng) {
+        return res.status(400).json({ success: false, message: "Faltan coordenadas para calcular la localidad" });
+      }
+
+      // 2. ¡LA MAGIA DE TUS POLÍGONOS! 
+      // Usamos el archivo de la alcaldía para saber exactamente dónde está
+      const localidadReal = geoService.getLocalidadByCoords(lat, lng) || "Desconocida";
+
+      // 3. Guardamos el evento para que el gráfico lo cuente
+      await prisma.analyticsEvent.create({
+        data: {
+          eventType: 'LOCATION_STATS_UPDATE',
+          payload: { 
+            localidad: localidadReal, 
+            lat: lat, 
+            lng: lng 
+          },
+          sessionId: req.user?.userId || "manual-toggle-event"
+        }
+      });
+      
+      res.json({ success: true, localidad_calculada: localidadReal });
+    } catch (err) {
+      console.error("Error al registrar analítica:", err);
+      res.status(500).json({ success: false, message: "Error interno" });
+    }
+  },
+
 };
 
 module.exports = analyticsController;
