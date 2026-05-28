@@ -25,6 +25,7 @@ app.use(express.json());
 // ── Event Listeners (register before routes) ────────────────
 require('./events/listeners/notificationListener');
 require('./events/listeners/analyticsListener');
+require('./events/listeners/botListener'); // BOT integrado como listener de eventos
 
 // ── Routes ──────────────────────────────────────────────────
 app.use('/api', require('./routes/index'));
