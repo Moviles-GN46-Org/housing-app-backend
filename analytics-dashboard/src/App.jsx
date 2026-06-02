@@ -8,6 +8,7 @@ import LocalidadChart from "./components/LocalidadChart";
 import FeatureLoadTimeCard from "./components/FeatureLoadTimeCard";
 import FilterUsageCard from "./components/FilterUsageCard";
 import RoommateProfileRealtimeCard from "./components/RoommateProfileRealtimeCard";
+import SearchByMonthCard from "./components/SearchByMonthCard";
 import DeviceBrandChart from "./components/DeviceBrandChart"; 
 import { LayoutDashboard, RefreshCw } from "lucide-react";
 
@@ -53,10 +54,23 @@ export default function App() {
           <div className="card-animate" style={{ animationDelay: "160ms" }}>
             <SessionCard />
           </div>
-          <div className="card-animate" style={{ animationDelay: "240ms" }}>
+          {/* <div className="card-animate" style={{ animationDelay: "240ms" }}>
+            <FeatureUsageCard />
+          </div> */}
+
+          {/* <div className="card-animate" style={{ animationDelay: "240ms" }}>
             <SupplyDensityCard />
           </div>
           <div className="card-animate" style={{ animationDelay: "320ms" }}>
+            <LocalidadChart />
+          </div> */}
+
+          <div className="card-animate" style={{ animationDelay: "240ms" }}>
+            <FeatureLoadTimeCard />
+          </div>
+
+          {/* ANTES: <LocalidadChart /> */}
+          <div className="card-animate" style={{ animationDelay: "400ms" }}>
             <LocalidadChart refreshToken={dashboardRefreshToken} />
           </div>
           <div className="card-animate" style={{ animationDelay: "400ms" }}>
@@ -66,13 +80,22 @@ export default function App() {
             <FeatureLoadTimeCard />
           </div>
 
-          {/* ¡Y ESTA ES LA TARJETA QUE FALTABA EN EL GRID! */}
           <div className="card-animate" style={{ animationDelay: "520ms" }}>
             <DeviceBrandChart refreshToken={dashboardRefreshToken} />
           </div>
 
-          <div className="card-animate lg:col-span-2" style={{ animationDelay: "560ms" }}>
+          <div
+            className="card-animate lg:col-span-2"
+            style={{ animationDelay: "560ms" }}
+          >
             <RoommateProfileRealtimeCard refreshToken={dashboardRefreshToken} />
+          </div>
+
+          <div className="card-animate" style={{ animationDelay: "640ms" }}>
+            <SearchByMonthCard />
+          </div>
+          <div className="card-animate" style={{ animationDelay: "720ms" }}>
+            <FilterUsageCard />
           </div>
         </div>
       </main>

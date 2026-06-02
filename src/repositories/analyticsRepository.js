@@ -209,10 +209,10 @@ const analyticsRepository = {
       from && to
         ? Prisma.sql`AND "timestamp" >= ${from} AND "timestamp" <= ${to}`
         : from
-        ? Prisma.sql`AND "timestamp" >= ${from}`
-        : to
-        ? Prisma.sql`AND "timestamp" <= ${to}`
-        : Prisma.empty;
+          ? Prisma.sql`AND "timestamp" >= ${from}`
+          : to
+            ? Prisma.sql`AND "timestamp" <= ${to}`
+            : Prisma.empty;
 
     return prisma.$queryRaw`
       SELECT
@@ -357,12 +357,14 @@ const analyticsRepository = {
       WHERE "isActive" = true
     `;
 
-    return rows[0] || {
-      smokesYes: 0,
-      smokesNo: 0,
-      hasPetsYes: 0,
-      hasPetsNo: 0,
-    };
+    return (
+      rows[0] || {
+        smokesYes: 0,
+        smokesNo: 0,
+        hasPetsYes: 0,
+        hasPetsNo: 0,
+      }
+    );
   },
 
   async getActiveBudgetRangeDistribution() {
@@ -447,6 +449,23 @@ const analyticsRepository = {
       FROM normalized
       GROUP BY value
       ORDER BY "count" DESC, "name" ASC
+    `;
+  },
+
+  async getSearchesByMonth({ from, to }) {
+    const fromClause = from
+      ? Prisma.sql`AND "searchedAt" >= ${from}`
+      : Prisma.empty;
+    const toClause = to ? Prisma.sql`AND "searchedAt" <  ${to}` : Prisma.empty;
+    return prisma.$queryRaw`
+      SELECT
+        EXTRACT(MONTH FROM "searchedAt")::int          AS "month",
+        TO_CHAR(DATE_TRUNC('month', "searchedAt"), 'Mon') AS "monthLabel",
+        COUNT(*)::int                                  AS "searches"
+      FROM "SearchEvent"
+      WHERE 1=1 ${fromClause} ${toClause}
+      GROUP BY EXTRACT(MONTH FROM "searchedAt"), DATE_TRUNC('month', "searchedAt")
+      ORDER BY "month" ASC
     `;
   },
 };

@@ -329,12 +329,16 @@ const analyticsService = {
         `eventType must be one of: ${VALID_EVENT_TYPES.join(", ")}`,
       );
     }
-    if (eventType === 'FEATURE_LOAD_TIME') {
+    if (eventType === "FEATURE_LOAD_TIME") {
       // Defend against garbage values from bad foreground/background
       // transitions or client clock skew. Out-of-range events are rejected
       // rather than clamped so bad data never lands in the stats table.
       const durationMs = Number(payload.durationMs);
-      if (!Number.isFinite(durationMs) || durationMs < 0 || durationMs > MAX_FEATURE_LOAD_DURATION_MS) {
+      if (
+        !Number.isFinite(durationMs) ||
+        durationMs < 0 ||
+        durationMs > MAX_FEATURE_LOAD_DURATION_MS
+      ) {
         throw new ValidationError(
           `payload.durationMs must be a number between 0 and ${MAX_FEATURE_LOAD_DURATION_MS}`,
         );
@@ -746,7 +750,7 @@ const analyticsService = {
   },
 
   async getLandlordResponseTime(landlordId) {
-    if (!landlordId) throw new ValidationError('landlordId is required');
+    if (!landlordId) throw new ValidationError("landlordId is required");
 
     const cached = responseTimeCache.get(landlordId);
     if (cached && Date.now() - cached.ts < 15 * 60 * 1000) return cached.data;
@@ -758,7 +762,11 @@ const analyticsService = {
       .filter((v) => Number.isFinite(v) && v >= 0);
 
     if (deltas.length < MIN_SAMPLES) {
-      const result = { medianMinutes: null, sampleSize: deltas.length, bucket: 'insufficient' };
+      const result = {
+        medianMinutes: null,
+        sampleSize: deltas.length,
+        bucket: "insufficient",
+      };
       responseTimeCache.set(landlordId, { ts: Date.now(), data: result });
       return result;
     }
@@ -767,11 +775,19 @@ const analyticsService = {
     const median = percentile(deltas, 0.5);
 
     const bucket =
-      median < 60   ? '<1h'   :
-      median < 360  ? 'hours' :
-      median < 1440 ? 'day'   : '>day';
+      median < 60
+        ? "<1h"
+        : median < 360
+          ? "hours"
+          : median < 1440
+            ? "day"
+            : ">day";
 
-    const result = { medianMinutes: Math.round(median), sampleSize: deltas.length, bucket };
+    const result = {
+      medianMinutes: Math.round(median),
+      sampleSize: deltas.length,
+      bucket,
+    };
     responseTimeCache.set(landlordId, { ts: Date.now(), data: result });
     return result;
   },
@@ -902,10 +918,7 @@ const analyticsService = {
 
     const budgetOrder = ["0-500k", "500k-1M", "1M-1.5M", "1.5M+"];
     const budgetMap = new Map(
-      (budgetRangeRows || []).map((row) => [
-        row.name,
-        Number(row.count || 0),
-      ]),
+      (budgetRangeRows || []).map((row) => [row.name, Number(row.count || 0)]),
     );
     const budgetRanges = budgetOrder.map((name) => {
       const count = budgetMap.get(name) || 0;
@@ -943,6 +956,30 @@ const analyticsService = {
     };
   },
 
+  async getSearchesByMonth(queryParams) {
+    const { from, to } = queryParams || {};
+    let fromDate = null;
+    let toDate = null;
+
+    if (from) {
+      fromDate = new Date(from);
+      if (Number.isNaN(fromDate.getTime()))
+        throw new ValidationError("from must be a valid ISO date");
+    }
+    if (to) {
+      toDate = new Date(to);
+      if (Number.isNaN(toDate.getTime()))
+        throw new ValidationError("to must be a valid ISO date");
+    }
+    if (fromDate && toDate && toDate <= fromDate) {
+      throw new ValidationError("to must be greater than from");
+    }
+
+    return analyticsRepository.getSearchesByMonth({
+      from: fromDate,
+      to: toDate,
+    });
+  },
   getDeviceBrandStats: async () => {
     try {
       const response = await axios.get(`${API_URL}/analytics/device-brands-stats`);

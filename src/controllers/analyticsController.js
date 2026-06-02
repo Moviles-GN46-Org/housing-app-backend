@@ -180,7 +180,9 @@ const analyticsController = {
 
   async getLandlordResponseTime(req, res, next) {
     try {
-      const data = await analyticsService.getLandlordResponseTime(req.params.id);
+      const data = await analyticsService.getLandlordResponseTime(
+        req.params.id,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -208,6 +210,12 @@ const analyticsController = {
     }
   },
 
+  async getSearchesByMonth(req, res, next) {
+    try {
+      const data = await analyticsService.getSearchesByMonth(req.query);
+      res.json({ success: true, data });
+    } catch (err) {
+      next(err);
   // --- CORRECCIÓN FINAL: Usamos un eventType que Prisma acepta (SESSION_EVENT) ---
   async logDeviceBrand(req, res) {
     try {

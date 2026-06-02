@@ -59,9 +59,14 @@ router.get(
   auth,
   analyticsController.getMyPreferredMaxDistance,
 );
+router.get("/searches-by-month", analyticsController.getSearchesByMonth);
 
 router.get("/top-filters", analyticsController.getTopFilters);
 
-router.get('/landlord/:id/response-time', auth, analyticsController.getLandlordResponseTime);
+router.get(
+  "/landlord/:id/response-time",
+  auth,
+  analyticsController.getLandlordResponseTime,
+);
 
 module.exports = router;
