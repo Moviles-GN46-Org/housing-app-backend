@@ -8,6 +8,7 @@ const { roleGuard, verifiedOnly } = require('../middleware/roleGuard');
 // Property CRUD
 router.get('/', auth, propertyController.search);
 router.get('/my', auth, roleGuard('LANDLORD'), propertyController.getMyListings);
+router.get('/top-rated', auth, propertyController.getTopRatedNearby);
 router.get('/:id', auth, propertyController.getById);
 router.post('/', auth, roleGuard('LANDLORD'), verifiedOnly, propertyController.create);
 router.put('/:id', auth, roleGuard('LANDLORD'), verifiedOnly, propertyController.update);

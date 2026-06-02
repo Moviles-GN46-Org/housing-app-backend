@@ -78,6 +78,15 @@ const propertyController = {
       next(err);
     }
   },
+
+  async getTopRatedNearby(req, res, next) {
+    try {
+      const properties = await propertyService.getTopRatedNearby(req.query);
+      res.json({ success: true, data: properties.map(toPropertyDTO) });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
 
 module.exports = propertyController;

@@ -212,6 +212,46 @@ const propertyService = {
   async getMyListings(landlordId) {
     return propertyRepository.findByLandlord(landlordId);
   },
+
+  async getTopRatedNearby({ lat, lng, radiusKm, limit, minReviews }) {
+    if (lat === undefined || lng === undefined || radiusKm === undefined) {
+      throw new ValidationError("lat, lng and radiusKm are required");
+    }
+
+    const limitNum = Math.min(parseInt(limit) || 5, 20);
+    const minReviewsNum = parseInt(minReviews) || 2;
+
+    let properties = await propertyRepository.findAllActiveWithReviews();
+    properties = distanceFilter.filter(properties, { lat, lng, radiusKm });
+
+    const ranked = properties
+      .map((p) => {
+        const ratings = p.reviews.map((r) => r.rating);
+        const reviewCount = ratings.length;
+        const averageRating =
+          reviewCount > 0
+            ? ratings.reduce((a, b) => a + b, 0) / reviewCount
+            : 0;
+        return { ...p, averageRating, reviewCount };
+      })
+      .filter((p) => p.reviewCount >= minReviewsNum)
+      .sort((a, b) => {
+        if (b.averageRating !== a.averageRating) {
+          return b.averageRating - a.averageRating;
+        }
+        return b.reviewCount - a.reviewCount;
+      })
+      .slice(0, limitNum);
+
+    logger.debug("Top-rated nearby search completed", {
+      lat,
+      lng,
+      radiusKm,
+      returned: ranked.length,
+    });
+
+    return ranked;
+  },
 };
 
 module.exports = propertyService;

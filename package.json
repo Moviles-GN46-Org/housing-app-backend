@@ -7,7 +7,8 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "jest --runInBand",
-    "seed:students": "node scripts/seed-students-batch.js"
+    "seed:students": "node scripts/seed-students-batch.js",
+    "seed:reviews": "node scripts/seed-reviews.js"
   },
   "repository": {
     "type": "git",
