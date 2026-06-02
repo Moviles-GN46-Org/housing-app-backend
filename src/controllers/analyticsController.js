@@ -48,7 +48,9 @@ const analyticsController = {
 
   async getPreferredMaxDistanceSummary(req, res, next) {
     try {
-      const data = await analyticsService.getPreferredMaxDistanceSummary(req.query);
+      const data = await analyticsService.getPreferredMaxDistanceSummary(
+        req.query,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -58,7 +60,10 @@ const analyticsController = {
   async getMyPreferredMaxDistance(req, res, next) {
     try {
       const userId = req.user?.userId;
-      const data = await analyticsService.getMyPreferredMaxDistance(userId, req.query);
+      const data = await analyticsService.getMyPreferredMaxDistance(
+        userId,
+        req.query,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -68,7 +73,10 @@ const analyticsController = {
   async trackSearchEvent(req, res, next) {
     try {
       const actorUserId = req.user?.userId || null;
-      const result = await analyticsService.trackSearchEvent(actorUserId, req.body);
+      const result = await analyticsService.trackSearchEvent(
+        actorUserId,
+        req.body,
+      );
       res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -78,7 +86,10 @@ const analyticsController = {
   async trackSearchFilterUsage(req, res, next) {
     try {
       const actorUserId = req.user?.userId || null;
-      const result = await analyticsService.trackSearchFilterUsage(actorUserId, req.body);
+      const result = await analyticsService.trackSearchFilterUsage(
+        actorUserId,
+        req.body,
+      );
       res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -171,7 +182,9 @@ const analyticsController = {
 
   async getRoommateProfileCharacteristics(req, res, next) {
     try {
-      const data = await analyticsService.getRoommateProfileCharacteristics(req.query);
+      const data = await analyticsService.getRoommateProfileCharacteristics(
+        req.query,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -193,15 +206,18 @@ const analyticsController = {
     try {
       const { lat, lng } = req.body;
       if (!lat || !lng) {
-        return res.status(400).json({ success: false, message: "Faltan coordenadas" });
+        return res
+          .status(400)
+          .json({ success: false, message: "Faltan coordenadas" });
       }
-      const localidadReal = geoService.getLocalidadByCoords(lat, lng) || "Desconocida";
+      const localidadReal =
+        geoService.getLocalidadByCoords(lat, lng) || "Desconocida";
       await prisma.analyticsEvent.create({
         data: {
-          eventType: 'LOCATION_STATS_UPDATE',
+          eventType: "LOCATION_STATS_UPDATE",
           payload: { localidad: localidadReal, lat: lat, lng: lng },
-          sessionId: req.user?.userId || "manual-toggle-event"
-        }
+          sessionId: req.user?.userId || "manual-toggle-event",
+        },
       });
       res.json({ success: true, localidad_calculada: localidadReal });
     } catch (err) {
@@ -216,17 +232,20 @@ const analyticsController = {
       res.json({ success: true, data });
     } catch (err) {
       next(err);
+    }
+  },
+
   // --- CORRECCIÓN FINAL: Usamos un eventType que Prisma acepta (SESSION_EVENT) ---
   async logDeviceBrand(req, res) {
     try {
       const { brand } = req.body;
       await prisma.analyticsEvent.create({
         data: {
-          eventType: 'SESSION_EVENT', // Aceptado por Prisma
-          screenName: 'MAP_DEVICE_BRAND', // Guardamos aquí nuestra etiqueta
+          eventType: "SESSION_EVENT", // Aceptado por Prisma
+          screenName: "MAP_DEVICE_BRAND", // Guardamos aquí nuestra etiqueta
           payload: { brand: brand || "UNKNOWN" },
-          sessionId: req.user?.userId || "anonymous-map-user"
-        }
+          sessionId: req.user?.userId || "anonymous-map-user",
+        },
       });
       res.status(201).json({ success: true });
     } catch (err) {
@@ -238,19 +257,21 @@ const analyticsController = {
   async getDeviceBrandStats(req, res) {
     try {
       const events = await prisma.analyticsEvent.findMany({
-        where: { screenName: 'MAP_DEVICE_BRAND' } // Filtramos por el nombre que guardamos arriba
+        where: { screenName: "MAP_DEVICE_BRAND" }, // Filtramos por el nombre que guardamos arriba
       });
-      
+
       const brandCounts = {};
-      events.forEach(e => {
-        const brand = e.payload?.brand || 'OTROS';
+      events.forEach((e) => {
+        const brand = e.payload?.brand || "OTROS";
         brandCounts[brand] = (brandCounts[brand] || 0) + 1;
       });
-      
-      const data = Object.keys(brandCounts).map(key => ({
-        marca: key,
-        conteo: brandCounts[key]
-      })).sort((a, b) => b.conteo - a.conteo);
+
+      const data = Object.keys(brandCounts)
+        .map((key) => ({
+          marca: key,
+          conteo: brandCounts[key],
+        }))
+        .sort((a, b) => b.conteo - a.conteo);
 
       res.json({ success: true, data });
     } catch (err) {

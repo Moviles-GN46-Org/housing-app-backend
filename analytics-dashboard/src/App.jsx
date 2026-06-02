@@ -9,7 +9,7 @@ import FeatureLoadTimeCard from "./components/FeatureLoadTimeCard";
 import FilterUsageCard from "./components/FilterUsageCard";
 import RoommateProfileRealtimeCard from "./components/RoommateProfileRealtimeCard";
 import SearchByMonthCard from "./components/SearchByMonthCard";
-import DeviceBrandChart from "./components/DeviceBrandChart"; 
+import DeviceBrandChart from "./components/DeviceBrandChart";
 import { LayoutDashboard, RefreshCw } from "lucide-react";
 
 export default function App() {
@@ -22,7 +22,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-bronze flex items-center justify-center shadow-sm">
-              <LayoutDashboard size={18} className="text-white" strokeWidth={2} />
+              <LayoutDashboard
+                size={18}
+                className="text-white"
+                strokeWidth={2}
+              />
             </div>
             <div>
               <h1 className="text-mocha font-semibold text-lg leading-tight tracking-tight">
@@ -65,17 +69,17 @@ export default function App() {
             <LocalidadChart />
           </div> */}
 
-          <div className="card-animate" style={{ animationDelay: "240ms" }}>
+          {/* <div className="card-animate" style={{ animationDelay: "240ms" }}>
             <FeatureLoadTimeCard />
-          </div>
+          </div> */}
 
           {/* ANTES: <LocalidadChart /> */}
           <div className="card-animate" style={{ animationDelay: "400ms" }}>
             <LocalidadChart refreshToken={dashboardRefreshToken} />
           </div>
-          <div className="card-animate" style={{ animationDelay: "400ms" }}>
+          {/* <div className="card-animate" style={{ animationDelay: "400ms" }}>
             <FilterUsageCard />
-          </div>
+          </div> */}
           <div className="card-animate" style={{ animationDelay: "480ms" }}>
             <FeatureLoadTimeCard />
           </div>
