@@ -65,9 +65,15 @@ const analyticsService = {
       return response.data;
     } catch (error) {
       console.error("Error in getSearchesByMonth:", error);
+      throw error;
+    }
+  },
+
   getDeviceBrandStats: async () => {
     try {
-      const response = await axios.get(`${API_URL}/analytics/device-brands-stats`);
+      const response = await axios.get(
+        `${API_URL}/analytics/device-brands-stats`,
+      );
       return response.data;
     } catch (error) {
       console.error("Error in getDeviceBrandStats:", error);

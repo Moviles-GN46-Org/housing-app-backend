@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 import analyticsService from "../services/analyticsService";
 
 const DeviceBrandChart = ({ refreshToken }) => {
@@ -22,10 +29,13 @@ const DeviceBrandChart = ({ refreshToken }) => {
 
   return (
     <div className="bg-white rounded-2xl p-6 border border-[#E8DDD4] shadow-sm h-full flex flex-col">
-      <h2 className="text-mocha font-semibold text-sm mb-4 uppercase">
-        Most used brand devices
+      <p className="text-taupe text-xs font-medium uppercase tracking-wider">
+        Most used brands
+      </p>
+      <h2 className="text-mocha font-semibold text-sm">
+        Which device brands are most used?
       </h2>
-      
+
       {data.length === 0 ? (
         <div className="flex-1 flex items-center justify-center text-taupe text-sm">
           Aún no hay datos de dispositivos...
@@ -44,7 +54,10 @@ const DeviceBrandChart = ({ refreshToken }) => {
                 label
               >
                 {data.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip />
