@@ -440,6 +440,21 @@ const analyticsRepository = {
       ORDER BY "count" DESC, "name" ASC
     `;
   },
+
+  async getSearchesByMonth({ from, to }) {
+    const fromClause = from ? Prisma.sql`AND "searchedAt" >= ${from}` : Prisma.empty;
+    const toClause   = to   ? Prisma.sql`AND "searchedAt" <  ${to}`   : Prisma.empty;
+    return prisma.$queryRaw`
+      SELECT
+        EXTRACT(MONTH FROM "searchedAt")::int          AS "month",
+        TO_CHAR(DATE_TRUNC('month', "searchedAt"), 'Mon') AS "monthLabel",
+        COUNT(*)::int                                  AS "searches"
+      FROM "SearchEvent"
+      WHERE 1=1 ${fromClause} ${toClause}
+      GROUP BY EXTRACT(MONTH FROM "searchedAt"), DATE_TRUNC('month', "searchedAt")
+      ORDER BY "month" ASC
+    `;
+  },
 };
 
 module.exports = analyticsRepository;

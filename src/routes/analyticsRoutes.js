@@ -57,6 +57,7 @@ router.get(
   auth,
   analyticsController.getMyPreferredMaxDistance,
 );
+router.get("/searches-by-month", analyticsController.getSearchesByMonth);
 
 router.get("/top-filters", analyticsController.getTopFilters);
 

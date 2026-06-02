@@ -8,6 +8,7 @@ import LocalidadChart from "./components/LocalidadChart";
 import FeatureLoadTimeCard from "./components/FeatureLoadTimeCard";
 import FilterUsageCard from "./components/FilterUsageCard";
 import RoommateProfileRealtimeCard from "./components/RoommateProfileRealtimeCard";
+import SearchByMonthCard from "./components/SearchByMonthCard";
 import { LayoutDashboard, RefreshCw } from "lucide-react";
 
 export default function App() {
@@ -126,6 +127,10 @@ export default function App() {
 
           <div className="card-animate lg:col-span-2" style={{ animationDelay: "560ms" }}>
             <RoommateProfileRealtimeCard refreshToken={dashboardRefreshToken} />
+          </div>
+
+          <div className="card-animate lg:col-span-2" style={{ animationDelay: "640ms" }}>
+            <SearchByMonthCard />
           </div>
         </div>
       </main>
