@@ -193,7 +193,9 @@ const analyticsController = {
 
   async getLandlordResponseTime(req, res, next) {
     try {
-      const data = await analyticsService.getLandlordResponseTime(req.params.id);
+      const data = await analyticsService.getLandlordResponseTime(
+        req.params.id,
+      );
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -204,28 +206,34 @@ const analyticsController = {
     try {
       // 1. Recibimos las coordenadas del celular
       const { lat, lng } = req.body;
-      
+
       if (!lat || !lng) {
-        return res.status(400).json({ success: false, message: "Faltan coordenadas para calcular la localidad" });
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Faltan coordenadas para calcular la localidad",
+          });
       }
 
-      // 2. ¡LA MAGIA DE TUS POLÍGONOS! 
+      // 2. ¡LA MAGIA DE TUS POLÍGONOS!
       // Usamos el archivo de la alcaldía para saber exactamente dónde está
-      const localidadReal = geoService.getLocalidadByCoords(lat, lng) || "Desconocida";
+      const localidadReal =
+        geoService.getLocalidadByCoords(lat, lng) || "Desconocida";
 
       // 3. Guardamos el evento para que el gráfico lo cuente
       await prisma.analyticsEvent.create({
         data: {
-          eventType: 'LOCATION_STATS_UPDATE',
-          payload: { 
-            localidad: localidadReal, 
-            lat: lat, 
-            lng: lng 
+          eventType: "LOCATION_STATS_UPDATE",
+          payload: {
+            localidad: localidadReal,
+            lat: lat,
+            lng: lng,
           },
-          sessionId: req.user?.userId || "manual-toggle-event"
-        }
+          sessionId: req.user?.userId || "manual-toggle-event",
+        },
       });
-      
+
       res.json({ success: true, localidad_calculada: localidadReal });
     } catch (err) {
       console.error("Error al registrar analítica:", err);
@@ -241,7 +249,6 @@ const analyticsController = {
       next(err);
     }
   },
-
 };
 
 module.exports = analyticsController;

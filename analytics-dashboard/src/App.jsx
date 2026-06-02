@@ -125,11 +125,17 @@ export default function App() {
             <LocalidadChart refreshToken={dashboardRefreshToken} />
           </div>
 
-          <div className="card-animate lg:col-span-2" style={{ animationDelay: "560ms" }}>
+          <div
+            className="card-animate lg:col-span-2"
+            style={{ animationDelay: "560ms" }}
+          >
             <RoommateProfileRealtimeCard refreshToken={dashboardRefreshToken} />
           </div>
 
-          <div className="card-animate lg:col-span-2" style={{ animationDelay: "640ms" }}>
+          <div
+            className="card-animate lg:col-span-2"
+            style={{ animationDelay: "640ms" }}
+          >
             <SearchByMonthCard />
           </div>
         </div>

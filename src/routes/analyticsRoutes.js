@@ -7,7 +7,7 @@ const { analyticsSearchRateLimit } = require("../middleware/rateLimit");
 
 router.post("/events", auth, analyticsController.logEvent);
 router.post("/batch", auth, analyticsController.logBatch);
-router.post('/roommate-update', analyticsController.logRoommateStatus);
+router.post("/roommate-update", analyticsController.logRoommateStatus);
 
 router.post(
   "/search-events",
@@ -61,6 +61,10 @@ router.get("/searches-by-month", analyticsController.getSearchesByMonth);
 
 router.get("/top-filters", analyticsController.getTopFilters);
 
-router.get('/landlord/:id/response-time', auth, analyticsController.getLandlordResponseTime);
+router.get(
+  "/landlord/:id/response-time",
+  auth,
+  analyticsController.getLandlordResponseTime,
+);
 
 module.exports = router;

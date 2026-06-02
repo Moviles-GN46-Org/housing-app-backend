@@ -48,10 +48,13 @@ export default function SearchByMonthCard() {
       }
     }
     load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const maxSearches = data.length > 0 ? Math.max(...data.map((d) => d.searches)) : 0;
+  const maxSearches =
+    data.length > 0 ? Math.max(...data.map((d) => d.searches)) : 0;
 
   return (
     <div className="bg-white_card rounded-2xl border border-[#E8DDD4] shadow-sm overflow-hidden">
@@ -96,7 +99,10 @@ export default function SearchByMonthCard() {
 
         {!loading && !error && data.length > 0 && (
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }}>
+            <BarChart
+              data={data}
+              margin={{ top: 4, right: 8, left: -16, bottom: 0 }}
+            >
               <XAxis
                 dataKey="monthLabel"
                 tick={{ fontSize: 11, fill: "#9C8878" }}
@@ -109,12 +115,19 @@ export default function SearchByMonthCard() {
                 tickLine={false}
                 allowDecimals={false}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "#F5ECE3" }} />
+              <Tooltip
+                content={<CustomTooltip />}
+                cursor={{ fill: "#F5ECE3" }}
+              />
               <Bar dataKey="searches" radius={[5, 5, 0, 0]} maxBarSize={40}>
                 {data.map((entry) => (
                   <Cell
                     key={entry.month}
-                    fill={entry.searches === maxSearches ? BAR_COLOR_PEAK : BAR_COLOR}
+                    fill={
+                      entry.searches === maxSearches
+                        ? BAR_COLOR_PEAK
+                        : BAR_COLOR
+                    }
                   />
                 ))}
               </Bar>
@@ -125,7 +138,9 @@ export default function SearchByMonthCard() {
         {/* Peak month callout */}
         {!loading && !error && data.length > 0 && (
           <div className="mt-3 flex items-center gap-2 bg-[#F5ECE3] rounded-xl px-4 py-2.5">
-            <span className="text-xs text-mocha font-semibold">Peak month:</span>
+            <span className="text-xs text-mocha font-semibold">
+              Peak month:
+            </span>
             <span className="text-xs text-taupe">
               {data.find((d) => d.searches === maxSearches)?.monthLabel} —{" "}
               {maxSearches.toLocaleString()} searches

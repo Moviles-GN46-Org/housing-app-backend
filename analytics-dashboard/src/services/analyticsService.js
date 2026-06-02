@@ -59,7 +59,9 @@ const analyticsService = {
       if (from) params.set("from", from);
       if (to) params.set("to", to);
       const qs = params.toString() ? `?${params.toString()}` : "";
-      const response = await axios.get(`${API_URL}/analytics/searches-by-month${qs}`);
+      const response = await axios.get(
+        `${API_URL}/analytics/searches-by-month${qs}`,
+      );
       return response.data;
     } catch (error) {
       console.error("Error in getSearchesByMonth:", error);
