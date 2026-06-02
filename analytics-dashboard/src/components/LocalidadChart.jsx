@@ -32,8 +32,17 @@ const LocalidadChart = ({ refreshToken }) => {
         setLoading(false);
       }
     };
+
+
     fetchStats();
+
+
+    const intervalId = setInterval(fetchStats, 5000);
+
+
+    return () => clearInterval(intervalId);
     
+
   }, [refreshToken]);
 
   if (loading)

@@ -259,29 +259,26 @@ const analyticsRepository = {
 
   async getSupplyDensityStats() {
     const results = await prisma.$queryRaw`
-      SELECT AVG((payload->>'value')::float) as "averageDensity", COUNT(*)::int as "totalChecks"
-      FROM "AnalyticsEvent" WHERE "eventType"::text = 'SUPPLY_DENSITY_CHECK'
+      SELECT 
+        AVG((payload->>'value')::float) as "averageDensity", 
+        COUNT(*)::int as "totalChecks"
+      FROM "AnalyticsEvent" 
+      WHERE "eventType"::text = 'SUPPLY_DENSITY_CHECK'
     `;
 
+    // Usamos results[0] porque es el primer elemento del array que devuelve queryRaw
     const stats = results[0];
 
-    return {
-      averageDensity: stats?.averageDensity || 0,
-      totalChecks: stats?.totalChecks || 0,
-      status: stats?.averageDensity > 0.4 ? "High Supply" : "High Demand",
-    };
-  },
+    // Si no hay datos, retornamos valores por defecto para no romper el dashboard
+    if (!stats) {
+      return { averageDensity: 0, totalChecks: 0, status: "High Demand" };
+    }
 
-  async getLocalidadStats() {
-    return prisma.$queryRaw`
-      SELECT
-        COALESCE(payload->>'localidad', 'Desconocida') AS "localidad",
-        COUNT(*)::int AS "conteo"
-      FROM "AnalyticsEvent"
-      WHERE "eventType"::text = 'LOCATION_STATS_UPDATE'
-      GROUP BY payload->>'localidad'
-      ORDER BY "conteo" DESC
-    `;
+    return {
+      averageDensity: stats.averageDensity || 0,
+      totalChecks: stats.totalChecks || 0,
+      status: (stats.averageDensity || 0) > 0.4 ? "High Supply" : "High Demand",
+    };
   },
 
   async getLandlordResponseTime(landlordId, windowDays = 90) {
@@ -319,6 +316,18 @@ const analyticsRepository = {
         EXTRACT(EPOCH FROM (lr."landlordRespAt" - fsm."studentMsgAt"))::float / 60 AS "deltaMinutes"
       FROM first_landlord_response lr
       JOIN first_student_msg fsm ON fsm."chatId" = lr."chatId"
+    `;
+  },
+
+  async getLocalidadStats() {
+    return prisma.$queryRaw`
+      SELECT
+        COALESCE(payload->>'localidad', 'Desconocida') AS "localidad",
+        COUNT(*)::int AS "conteo"
+      FROM "AnalyticsEvent"
+      WHERE "eventType"::text = 'LOCATION_STATS_UPDATE'
+      GROUP BY payload->>'localidad'
+      ORDER BY "conteo" DESC
     `;
   },
 
