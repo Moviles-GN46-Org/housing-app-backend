@@ -66,12 +66,13 @@ export default function SearchByMonthCard() {
               <CalendarDays size={15} className="text-bronze" />
             </div>
             <div>
-              <h3 className="text-mocha font-semibold text-sm leading-tight">
-                Search Concentration by Month
-              </h3>
-              <p className="text-taupe text-xs mt-0.5">
-                All-time housing searches grouped by month
+              <p className="text-taupe text-xs font-medium uppercase tracking-wider">
+                HOUSING SEARCHES BY MONTH
               </p>
+              <h3 className="text-mocha font-semibold text-sm leading-tight">
+                In which months does the highest concentration of housing search
+                occur?
+              </h3>
             </div>
           </div>
         </div>
@@ -135,14 +136,13 @@ export default function SearchByMonthCard() {
           </ResponsiveContainer>
         )}
 
-        {/* Peak month callout */}
         {!loading && !error && data.length > 0 && (
           <div className="mt-3 flex items-center gap-2 bg-[#F5ECE3] rounded-xl px-4 py-2.5">
             <span className="text-xs text-mocha font-semibold">
               Peak month:
             </span>
             <span className="text-xs text-taupe">
-              {data.find((d) => d.searches === maxSearches)?.monthLabel} —{" "}
+              {data.find((d) => d.searches === maxSearches)?.monthLabel} -{" "}
               {maxSearches.toLocaleString()} searches
             </span>
           </div>

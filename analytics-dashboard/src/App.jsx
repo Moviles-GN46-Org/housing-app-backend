@@ -104,39 +104,35 @@ export default function App() {
             <FeatureUsageCard />
           </div> */}
 
-          <div className="card-animate" style={{ animationDelay: "240ms" }}>
+          {/* <div className="card-animate" style={{ animationDelay: "240ms" }}>
             <SupplyDensityCard />
           </div>
 
           <div className="card-animate" style={{ animationDelay: "320ms" }}>
             <LocalidadChart />
-          </div>
+          </div> */}
 
-          <div className="card-animate" style={{ animationDelay: "400ms" }}>
-            <FilterUsageCard />
-          </div>
-
-          <div className="card-animate" style={{ animationDelay: "480ms" }}>
+          <div className="card-animate" style={{ animationDelay: "240ms" }}>
             <FeatureLoadTimeCard />
           </div>
 
           {/* ANTES: <LocalidadChart /> */}
-          <div className="card-animate" style={{ animationDelay: "320ms" }}>
+          <div className="card-animate" style={{ animationDelay: "400ms" }}>
             <LocalidadChart refreshToken={dashboardRefreshToken} />
           </div>
 
           <div
             className="card-animate lg:col-span-2"
-            style={{ animationDelay: "560ms" }}
+            style={{ animationDelay: "480ms" }}
           >
             <RoommateProfileRealtimeCard refreshToken={dashboardRefreshToken} />
           </div>
 
-          <div
-            className="card-animate lg:col-span-2"
-            style={{ animationDelay: "640ms" }}
-          >
+          <div className="card-animate" style={{ animationDelay: "560ms" }}>
             <SearchByMonthCard />
+          </div>
+          <div className="card-animate" style={{ animationDelay: "640ms" }}>
+            <FilterUsageCard />
           </div>
         </div>
       </main>
