@@ -71,6 +71,16 @@ const propertyRepository = {
   async countByLandlord(landlordId) {
     return prisma.property.count({ where: { landlordId } });
   },
+
+  async findAllActiveWithReviews() {
+    return prisma.property.findMany({
+      where: { status: 'ACTIVE' },
+      include: {
+        landlord: { include: { landlordVerification: true } },
+        reviews: { select: { rating: true } },
+      },
+    });
+  },
 };
 
 module.exports = propertyRepository;

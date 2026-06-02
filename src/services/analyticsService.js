@@ -980,6 +980,16 @@ const analyticsService = {
       to: toDate,
     });
   },
+  getDeviceBrandStats: async () => {
+    try {
+      const response = await axios.get(`${API_URL}/analytics/device-brands-stats`);
+      return response.data;
+    } catch (error) {
+      console.error("Error in getDeviceBrandStats:", error);
+      throw error;
+    }
+  }
+
 };
 
 module.exports = analyticsService;

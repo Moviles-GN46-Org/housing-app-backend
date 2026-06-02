@@ -7,7 +7,9 @@ const { analyticsSearchRateLimit } = require("../middleware/rateLimit");
 
 router.post("/events", auth, analyticsController.logEvent);
 router.post("/batch", auth, analyticsController.logBatch);
-router.post("/roommate-update", analyticsController.logRoommateStatus);
+router.post('/roommate-update', analyticsController.logRoommateStatus);
+router.post('/device-brands', analyticsController.logDeviceBrand);
+router.get('/device-brands-stats', analyticsController.getDeviceBrandStats);
 
 router.post(
   "/search-events",

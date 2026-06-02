@@ -48,9 +48,7 @@ const analyticsController = {
 
   async getPreferredMaxDistanceSummary(req, res, next) {
     try {
-      const data = await analyticsService.getPreferredMaxDistanceSummary(
-        req.query,
-      );
+      const data = await analyticsService.getPreferredMaxDistanceSummary(req.query);
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -60,10 +58,7 @@ const analyticsController = {
   async getMyPreferredMaxDistance(req, res, next) {
     try {
       const userId = req.user?.userId;
-      const data = await analyticsService.getMyPreferredMaxDistance(
-        userId,
-        req.query,
-      );
+      const data = await analyticsService.getMyPreferredMaxDistance(userId, req.query);
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -73,10 +68,7 @@ const analyticsController = {
   async trackSearchEvent(req, res, next) {
     try {
       const actorUserId = req.user?.userId || null;
-      const result = await analyticsService.trackSearchEvent(
-        actorUserId,
-        req.body,
-      );
+      const result = await analyticsService.trackSearchEvent(actorUserId, req.body);
       res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -86,10 +78,7 @@ const analyticsController = {
   async trackSearchFilterUsage(req, res, next) {
     try {
       const actorUserId = req.user?.userId || null;
-      const result = await analyticsService.trackSearchFilterUsage(
-        actorUserId,
-        req.body,
-      );
+      const result = await analyticsService.trackSearchFilterUsage(actorUserId, req.body);
       res.status(201).json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -182,9 +171,7 @@ const analyticsController = {
 
   async getRoommateProfileCharacteristics(req, res, next) {
     try {
-      const data = await analyticsService.getRoommateProfileCharacteristics(
-        req.query,
-      );
+      const data = await analyticsService.getRoommateProfileCharacteristics(req.query);
       res.json({ success: true, data });
     } catch (err) {
       next(err);
@@ -204,36 +191,18 @@ const analyticsController = {
 
   async logRoommateStatus(req, res) {
     try {
-      // 1. Recibimos las coordenadas del celular
       const { lat, lng } = req.body;
-
       if (!lat || !lng) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Faltan coordenadas para calcular la localidad",
-          });
+        return res.status(400).json({ success: false, message: "Faltan coordenadas" });
       }
-
-      // 2. ¡LA MAGIA DE TUS POLÍGONOS!
-      // Usamos el archivo de la alcaldía para saber exactamente dónde está
-      const localidadReal =
-        geoService.getLocalidadByCoords(lat, lng) || "Desconocida";
-
-      // 3. Guardamos el evento para que el gráfico lo cuente
+      const localidadReal = geoService.getLocalidadByCoords(lat, lng) || "Desconocida";
       await prisma.analyticsEvent.create({
         data: {
-          eventType: "LOCATION_STATS_UPDATE",
-          payload: {
-            localidad: localidadReal,
-            lat: lat,
-            lng: lng,
-          },
-          sessionId: req.user?.userId || "manual-toggle-event",
-        },
+          eventType: 'LOCATION_STATS_UPDATE',
+          payload: { localidad: localidadReal, lat: lat, lng: lng },
+          sessionId: req.user?.userId || "manual-toggle-event"
+        }
       });
-
       res.json({ success: true, localidad_calculada: localidadReal });
     } catch (err) {
       console.error("Error al registrar analítica:", err);
@@ -247,6 +216,45 @@ const analyticsController = {
       res.json({ success: true, data });
     } catch (err) {
       next(err);
+  // --- CORRECCIÓN FINAL: Usamos un eventType que Prisma acepta (SESSION_EVENT) ---
+  async logDeviceBrand(req, res) {
+    try {
+      const { brand } = req.body;
+      await prisma.analyticsEvent.create({
+        data: {
+          eventType: 'SESSION_EVENT', // Aceptado por Prisma
+          screenName: 'MAP_DEVICE_BRAND', // Guardamos aquí nuestra etiqueta
+          payload: { brand: brand || "UNKNOWN" },
+          sessionId: req.user?.userId || "anonymous-map-user"
+        }
+      });
+      res.status(201).json({ success: true });
+    } catch (err) {
+      console.error("Error guardando marca:", err);
+      res.status(500).json({ success: false });
+    }
+  },
+
+  async getDeviceBrandStats(req, res) {
+    try {
+      const events = await prisma.analyticsEvent.findMany({
+        where: { screenName: 'MAP_DEVICE_BRAND' } // Filtramos por el nombre que guardamos arriba
+      });
+      
+      const brandCounts = {};
+      events.forEach(e => {
+        const brand = e.payload?.brand || 'OTROS';
+        brandCounts[brand] = (brandCounts[brand] || 0) + 1;
+      });
+      
+      const data = Object.keys(brandCounts).map(key => ({
+        marca: key,
+        conteo: brandCounts[key]
+      })).sort((a, b) => b.conteo - a.conteo);
+
+      res.json({ success: true, data });
+    } catch (err) {
+      res.status(500).json({ success: false });
     }
   },
 };

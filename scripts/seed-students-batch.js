@@ -4,6 +4,8 @@ const prisma = require('../src/prisma');
 
 const DEFAULT_COUNT = 20;
 const DEFAULT_PREFIX = 'test-student';
+const bcrypt = require('bcryptjs');
+const TEST_PASSWORD = 'Test12345!';
 
 const SLEEP_SCHEDULES = ['EARLY_BIRD', 'NIGHT_OWL', 'FLEXIBLE'];
 const CLEANLINESS_LEVELS = ['VERY_TIDY', 'MODERATE', 'RELAXED'];
@@ -36,7 +38,7 @@ function round2(value) {
   return Number(value.toFixed(2));
 }
 
-function buildStudentData(index, prefix) {
+async function buildStudentData(index, prefix) {
   const sequence = index + 1;
   const firstName = `Student${sequence}`;
   const lastName = 'Batch';
@@ -52,7 +54,8 @@ function buildStudentData(index, prefix) {
       authProvider: 'EMAIL',
       profilePictureUrl: null,
       phone: null,
-      passwordHash: null,
+      // Test-only seed: creates verified students with a fixed password for internal QA.
+      passwordHash: await bcrypt.hash(TEST_PASSWORD, 12),
       isActive: true,
     },
     verification: {
@@ -88,7 +91,7 @@ async function main() {
   console.log(`Creating ${count} verified student users...`);
 
   for (let i = 0; i < count; i += 1) {
-    const payload = buildStudentData(i, prefix);
+    const payload = await buildStudentData(i, prefix);
 
     const user = await prisma.user.create({ data: payload.user });
     await prisma.studentVerification.create({
